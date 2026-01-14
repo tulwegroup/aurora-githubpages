@@ -10,5 +10,5 @@ healthcheckTimeout = 100
 PYTHONUNBUFFERED = "true"
 ENVIRONMENT = "production"
 
-[nixpacks]
-buildCommands = ["pip install -r requirements.txt", "npm run build"]
+[phases.build]
+cmds = ["pip install -r requirements.txt", "npm run build"]
