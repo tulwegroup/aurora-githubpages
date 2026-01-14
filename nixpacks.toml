@@ -1,0 +1,13 @@
+[phases.install]
+# Install Python dependencies at BUILD time
+dependsOn = ["setup"]
+cmds = [
+  "pip install --no-cache-dir -r requirements.txt"
+]
+
+[phases.build]
+# Build frontend
+dependsOn = ["install"]
+cmds = [
+  "npm run build"
+]

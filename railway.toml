@@ -2,10 +2,10 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "pip install -r requirements.txt && gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT backend.main:app --timeout 120"
+startCommand = "gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT backend.main:app --timeout 120 --access-logfile - --error-logfile -"
 healthcheckPath = "/system/health"
-healthcheckTimeout = 300
-healthcheckInterval = 10
+healthcheckTimeout = 60
+healthcheckInterval = 5
 
 [environment]
 PYTHONUNBUFFERED = "true"
