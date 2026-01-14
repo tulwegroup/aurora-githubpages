@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ExplorationCampaign, AppView, CAMPAIGN_PHASES, ScanSector, MineralAgentType, HiveMindState } from '../types';
 import { RESOURCE_CATALOG } from '../constants';
-import MapVisualization from './MapVisualization';
+import MapVisualization from '../../components/MapVisualization';
 import { Plus, Target, Activity, Zap, Wifi, ShieldCheck, Lock, Terminal, Loader2, Radar, StopCircle } from 'lucide-react';
 import { AuroraAPI } from '../api';
 
