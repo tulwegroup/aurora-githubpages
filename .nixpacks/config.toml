@@ -1,0 +1,6 @@
+# Enable both Python and Node.js providers
+[providers.python]
+enabled = true
+
+[providers.nodejs] 
+enabled = true
