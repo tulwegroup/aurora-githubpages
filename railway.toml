@@ -2,9 +2,13 @@
 builder = "nixpacks"
 
 [deploy]
+startCommand = "gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT backend.main:app --timeout 120"
 healthcheckPath = "/system/health"
 healthcheckTimeout = 100
 
 [environment]
 PYTHONUNBUFFERED = "true"
 ENVIRONMENT = "production"
+
+[nixpacks]
+buildCommands = ["pip install -r requirements.txt", "npm run build"]
