@@ -11,4 +11,4 @@ PYTHONUNBUFFERED = "true"
 ENVIRONMENT = "production"
 
 [phases.build]
-cmds = ["pip install -r requirements.txt", "npm run build"]
+cmds = ["bash ./build.sh"]
