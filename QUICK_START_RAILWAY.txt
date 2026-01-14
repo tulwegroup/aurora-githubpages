@@ -1,0 +1,148 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║         AURORA OSI V3 - RAILWAY DEPLOYMENT (FREE TIER ENABLED)            ║
+║                      Complete Setup - 5 Minutes                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+🎯 QUICK START
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to https://railway.app → New Project → GitHub Repo
+2. Select aurora-githubpages → Click Deploy
+3. Add PostgreSQL + Redis services (click +)
+4. Add GEE_SERVICE_ACCOUNT_FILE to Variables
+5. Add 5 GitHub Secrets (see below)
+6. git push origin main
+7. Watch GitHub Actions deploy everything! ✅
+
+📋 GITHUB SECRETS NEEDED (5)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+RAILWAY_TOKEN          → From railway.app/account/tokens
+RAILWAY_PROJECT_ID     → From your Railway project URL
+VERCEL_TOKEN           → Your Vercel auth token
+ORG_ID                 → Your Vercel organization ID
+PROJECT_ID             → Your Vercel project ID
+
+🔐 RAILWAY VARIABLES NEEDED (1)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+GEE_SERVICE_ACCOUNT_FILE → Paste your entire GEE service account JSON key
+                           (from https://console.cloud.google.com/iam-admin/serviceaccounts)
+
+💰 COST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ $0/month - Completely free on Railway free tier
+✅ Includes: Backend + PostgreSQL + Redis
+✅ No billing required
+✅ Upgrade anytime when needed
+
+🏗️  ARCHITECTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+git push origin main
+         ↓
+GitHub Actions
+     ↙        ↘
+Frontend    Backend
+(Vercel)   (Railway)
+    ↓          ↓
+   CDN    PostgreSQL + Redis
+    ↓          ↓
+  Live        Live
+
+📝 WORKFLOW FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ .github/workflows/deploy.yml   → GitHub Actions workflow (Vercel + Railway)
+✅ railway.toml                   → Railway configuration
+✅ Procfile                        → Process file for Railway
+✅ RAILWAY_SETUP.md               → Complete Railway setup guide
+✅ DEPLOYMENT.md                  → Quick deployment reference
+✅ ARCHITECTURE.md                → System architecture (updated)
+
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Read: RAILWAY_SETUP.md (most detailed)
+Then: DEPLOYMENT.md (secrets reference)
+Then: ARCHITECTURE.md (system design)
+
+✨ WHAT'S INCLUDED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Frontend: Vercel (automatic CDN)
+✅ Backend: Railway (Python + FastAPI)
+✅ Database: PostgreSQL (Railway managed)
+✅ Cache: Redis (Railway managed)
+✅ CI/CD: GitHub Actions (free)
+✅ Secrets: All environment variables configured
+✅ GEE: Service account key support
+
+🚀 DEPLOYMENT FLOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Every push to main:
+  1. Frontend builds on Vercel    (~2-3 min)
+  2. Backend tests on GitHub      (~2-3 min)
+  3. Backend deploys to Railway   (~2-3 min)
+  4. Total time: ~5-10 minutes
+  5. Both live simultaneously
+
+🔍 MONITORING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Railway Logs:         railway logs -f
+Railway Status:       railway status
+GitHub Actions:       gh workflow view deploy.yml
+Vercel Dashboard:     vercel.com/dashboard
+Health Check:         curl https://your-backend-url.railway.app/system/health
+
+✅ READY TO DEPLOY?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Follow these steps:
+
+STEP 1: Create Railway Project (2 min)
+  ☐ Go to railway.app
+  ☐ New Project → GitHub Repo
+  ☐ Select aurora-githubpages
+  ☐ Authorize GitHub connection
+
+STEP 2: Add Services (2 min)
+  ☐ Click + → Database → PostgreSQL
+  ☐ Click + → Database → Redis
+  ☐ Wait for services to initialize
+
+STEP 3: Configure GEE (1 min)
+  ☐ Railway dashboard → Variables
+  ☐ Add GEE_SERVICE_ACCOUNT_FILE with your JSON key
+
+STEP 4: Get Credentials (1 min)
+  ☐ Railway → Account → Tokens → Create token
+  ☐ Copy your project ID from URL
+
+STEP 5: Add GitHub Secrets (1 min)
+  ☐ https://github.com/tulwegroup/aurora-githubpages
+  ☐ Settings → Secrets → New secret (add 5 secrets)
+
+STEP 6: Deploy (automatic)
+  ☐ git push origin main
+  ☐ Watch GitHub Actions run
+  ☐ Frontend live in ~2-3 min
+  ☐ Backend live in ~5 min
+
+✨ TOTAL TIME: ~10 MINUTES ✨
+
+🎉 YOU'RE DONE!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Aurora OSI v3 is now live!
+  Frontend: https://aurora-osi.vercel.app
+  Backend:  https://aurora-backend-xxx.railway.app
+  All for: $0/month! 🚀
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Questions? See RAILWAY_SETUP.md for detailed setup instructions.
+Code: https://github.com/tulwegroup/aurora-githubpages
