@@ -1,9 +1,52 @@
-# GitHub Actions Secrets Setup Guide
+# Aurora OSI v3 - Railway Deployment Guide
 
-## Required Secrets for Aurora OSI v3 Deployment
+## Deployment Stack
 
-### Vercel Configuration
-Add these secrets to your GitHub repository (Settings > Secrets and variables > Actions):
+- **Frontend**: Vercel (auto-deployed)
+- **Backend**: Railway (auto-deployed)
+- **Database**: Railway PostgreSQL
+- **Cache**: Railway Redis
+- **CI/CD**: GitHub Actions
+
+## Quick Start (5 minutes)
+
+### 1. Create Railway Project
+
+Go to https://railway.app:
+1. Click "New Project"
+2. Select "GitHub Repo" → select `aurora-githubpages`
+3. Railway auto-detects and creates backend service
+
+### 2. Add Services
+
+Click "+" to add:
+- **PostgreSQL** (auto-links as DATABASE_URL)
+- **Redis** (auto-links as REDIS_URL)
+
+### 3. Configure GEE
+
+In Railway dashboard → Variables:
+- Add `GEE_SERVICE_ACCOUNT_FILE` = your entire GEE service account JSON
+
+### 4. Add GitHub Secrets
+
+```bash
+gh secret set RAILWAY_TOKEN --body "$(railway tokens create)"
+gh secret set RAILWAY_PROJECT_ID --body "your-project-id"
+gh secret set VERCEL_TOKEN --body "your-vercel-token"
+gh secret set ORG_ID --body "your-org-id"
+gh secret set PROJECT_ID --body "your-project-id"
+```
+
+### 5. Deploy!
+
+```bash
+git push origin main
+```
+
+✅ Done! Frontend and backend automatically deploy.
+
+## Required GitHub Secrets
 
 ```
 VERCEL_TOKEN=<your-vercel-authentication-token>

@@ -1,8 +1,8 @@
-# Architecture: GitHub Actions + Vercel + Google Cloud Run
+# Architecture: GitHub Actions + Vercel + Railway
 
 ## Overview
 
-Aurora OSI v3 is deployed using a modern serverless architecture:
+Aurora OSI v3 is deployed using a modern full-stack architecture:
 
 ```
 GitHub Repository
@@ -12,10 +12,10 @@ GitHub Actions Workflow
     │  └→ Vercel Deployment
     │     └→ Served on aurora-osi.vercel.app
     │
-    └→ Backend (Docker build)
-       ├→ Google Container Registry
-       └→ Cloud Run Deployment
-          └→ REST API on Cloud Run
+    └→ Backend (Python app)
+       └→ Railway Deployment
+          └→ REST API on Railway
+             └→ PostgreSQL + Redis
 ```
 
 ## Components
@@ -27,28 +27,26 @@ GitHub Actions Workflow
 - **Build**: Automatic on push to main
 - **CDN**: Vercel Global CDN (automatic)
 
-### Backend (Google Cloud Run)
-- **Platform**: Google Cloud Run
+### Backend (Railway)
+- **Platform**: Railway
 - **Language**: Python 3.11
 - **Framework**: FastAPI + Uvicorn
-- **Container Registry**: Google Container Registry (gcr.io)
-- **Region**: us-central1
-- **Auto-scaling**: 1-100 instances
-- **Memory**: 2GB per instance
-- **CPU**: 2 vCPU per instance
+- **Region**: Global (user-configurable)
+- **Auto-scaling**: Yes (Railway managed)
+- **Memory**: Scalable per deployment
+- **Database**: PostgreSQL (Railway managed)
+- **Cache**: Redis (Railway managed)
 
-### Database (Cloud SQL)
-- **Platform**: Google Cloud SQL
+### Database (Railway PostgreSQL)
+- **Platform**: Railway Managed PostgreSQL
 - **Engine**: PostgreSQL 15
-- **Instance**: aurora-db (db-f1-micro)
-- **Region**: us-central1
-- **Backup**: Automatic daily backups
+- **Backups**: Automatic daily backups
+- **Retention**: 30 days
 
-### Cache (Memorystore)
-- **Platform**: Google Cloud Memorystore
+### Cache (Railway Redis)
+- **Platform**: Railway Managed Redis
 - **Engine**: Redis 7.0
-- **Size**: 1GB
-- **Region**: us-central1
+- **Region**: Auto-selected by Railway
 
 ## Deployment Flow
 
@@ -68,25 +66,27 @@ GitHub Actions Workflow
    - CDN cache invalidation
 
 4. **Backend deployment**
-   - Build Docker image
-   - Push to Google Container Registry
-   - Deploy new revision to Cloud Run
-   - Update traffic routing (100% to new revision)
+   - Install Python dependencies
+   - Deploy to Railway
+   - Environment variables auto-injected
+   - Health check verification
 
-5. **Database migration** (if needed)
-   - Run database schema updates
-   - Seed data if necessary
+5. **Services online**
+   - Frontend: https://aurora-osi.vercel.app
+   - Backend: https://aurora-backend-xxx.railway.app
+   - Database & Cache: Auto-provisioned
 
 ## Cost Optimization
 
 | Service | Estimate | Notes |
 |---------|----------|-------|
-| Cloud Run | ~$5-20/month | Auto-scales, charged per invocation |
-| Cloud SQL | ~$10-15/month | db-f1-micro tier |
-| Memorystore Redis | ~$10-15/month | 1GB instance |
-| Cloud Build | ~$0.003/build-minute | Free tier: 120 mins/month |
-| Container Registry | ~$0.10/GB | Minimal storage for one image |
-| **Total** | **~$35-65/month** | Scales with traffic |
+| Railway Backend | $0/month* | Free tier with usage limits |
+| Railway PostgreSQL | $0/month* | Included in free tier |
+| Railway Redis | $0/month* | Included in free tier |
+| Vercel Frontend | Free | Included with free tier |
+| **Total** | **$0/month*** | Completely free during development |
+
+*Free tier includes generous limits; upgrade as traffic grows (~$5-20/month typical)
 
 ## Monitoring & Logs
 
