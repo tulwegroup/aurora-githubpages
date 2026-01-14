@@ -1,6 +1,10 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r backend/requirements.txt"
+
+[nixpacks]
+# Specify Python 3.11 and Node.js for mixed stack
+packages = ["python311", "python311Packages.pip"]
+commands = ["pip install -r backend/requirements.txt", "npm install"]
 
 [deploy]
 startCommand = "gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT backend.main:app --timeout 120"
