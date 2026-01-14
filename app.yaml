@@ -1,0 +1,20 @@
+runtime: python311
+entrypoint: gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT backend.main:app
+
+env: standard
+min_instances: 1
+max_instances: 100
+
+automatic_scaling:
+  min_instances: 1
+  max_instances: 100
+
+env_variables:
+  ENVIRONMENT: "production"
+
+inbound_services:
+  - cloud_scheduler
+
+vpc_connector: "projects/YOUR_PROJECT_ID/locations/us-central1/connectors/aurora-connector"
+
+service_account: "aurora-backend@YOUR_PROJECT_ID.iam.gserviceaccount.com"

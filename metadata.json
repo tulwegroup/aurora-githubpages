@@ -1,0 +1,7 @@
+{
+  "name": "Aurora OSI v3",
+  "description": "Consolidated Planetary Subsurface Intelligence Platform.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
