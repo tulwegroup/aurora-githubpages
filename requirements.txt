@@ -12,3 +12,4 @@ gunicorn==21.2.0
 earthengine-api==0.1.359
 python-dotenv==1.0.0
 cors==1.0.1
+psutil==5.9.6
