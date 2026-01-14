@@ -1,8 +1,8 @@
 [phases.install]
-# Install Python dependencies at BUILD time
+# Install Python dependencies at BUILD time using python3 -m pip
 dependsOn = ["setup"]
 cmds = [
-  "pip install --no-cache-dir -r requirements.txt"
+  "python3 -m pip install --no-cache-dir -r requirements.txt"
 ]
 
 [phases.build]
