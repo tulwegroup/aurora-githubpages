@@ -41,11 +41,14 @@ COPY . .
 # Set environment
 ENV PYTHONUNBUFFERED=true
 ENV PORT=8000
+ENV PYTHONPATH=/app:$PYTHONPATH
+
+# Expose port for Railway
+EXPOSE 8000
 
 # Health check - call /system/health endpoint directly
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8000/system/health || exit 1
 
-# Start with uvicorn app_wrapper - use PORT or default to 8000
-# Using exec form with explicit sh -c to ensure port expansion
-CMD ["sh", "-c", "uvicorn app_wrapper:app --host 0.0.0.0 --port 8000 --log-level info"]
+# Start with uvicorn app_wrapper with verbose logging
+CMD ["sh", "-c", "echo 'Starting Aurora OSI v3 on port 8000' && uvicorn app_wrapper:app --host 0.0.0.0 --port 8000 --log-level debug"]
