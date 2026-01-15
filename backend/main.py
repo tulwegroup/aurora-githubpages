@@ -25,7 +25,12 @@ from .models import (
     VoxelData
 )
 from .database_manager import get_db
-from .database.spectral_library import SPECTRAL_LIBRARY
+try:
+    from .database.spectral_library import SPECTRAL_LIBRARY
+except Exception as e:
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"⚠️ Could not import SPECTRAL_LIBRARY: {str(e)}")
+    SPECTRAL_LIBRARY = None
 from .config import settings
 from .routers import system
 
@@ -60,16 +65,17 @@ app.add_middleware(
 # Include routers
 app.include_router(system.router)
 
+# Flag to track startup completion
+_startup_complete = False
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize on startup"""
+    """Initialize on startup - non-blocking"""
+    global _startup_complete
     logger.info("🚀 Aurora OSI v3 Backend Starting")
-    try:
-        mineral_count = len(SPECTRAL_LIBRARY.get_all_minerals())
-        logger.info(f"📚 Spectral Library loaded with {mineral_count} minerals")
-    except Exception as e:
-        logger.warning(f"⚠️ Could not load spectral library: {str(e)}")
+    # Log startup but don't block on anything
+    logger.info("✓ Backend initialization complete")
+    _startup_complete = True
 
 
 @app.on_event("shutdown")
