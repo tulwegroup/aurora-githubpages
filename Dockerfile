@@ -42,13 +42,10 @@ COPY . .
 ENV PYTHONUNBUFFERED=true
 ENV PORT=8000
 
-# Copy Python entrypoint script
-COPY entrypoint.py .
-RUN chmod +x entrypoint.py
-
 # Health check - call /system/health endpoint directly
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/system/health || exit 1
+    CMD curl -f http://localhost:8000/system/health || exit 1
 
-# Use Python entrypoint - cannot be overridden by Railway start command
-ENTRYPOINT ["python", "entrypoint.py"]
+# Start with uvicorn app_wrapper - use PORT or default to 8000
+# Using exec form with explicit sh -c to ensure port expansion
+CMD ["sh", "-c", "uvicorn app_wrapper:app --host 0.0.0.0 --port 8000 --log-level info"]
