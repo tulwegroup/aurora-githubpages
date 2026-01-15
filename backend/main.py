@@ -24,7 +24,7 @@ from .models import (
     DetectionTier,
     VoxelData
 )
-from .database import get_db
+from .database_manager import get_db
 from .database.spectral_library import SPECTRAL_LIBRARY
 from .config import settings
 from .routers import system
@@ -78,6 +78,7 @@ async def shutdown_event():
 # ===== HEALTH CHECK =====
 
 @app.get("/health")
+@app.get("/system/health")
 async def health_check():
     """System health check"""
     return {
