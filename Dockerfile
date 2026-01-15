@@ -46,5 +46,12 @@ ENV PORT=8000
 HEALTHCHECK --interval=10s --timeout=30s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT}/system/health || exit 1
 
-# Start gunicorn
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000", "backend.main:app", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+# Start gunicorn with PORT from environment variable
+CMD exec gunicorn \
+    -w 4 \
+    -k uvicorn.workers.UvicornWorker \
+    --bind 0.0.0.0:${PORT} \
+    backend.main:app \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -
