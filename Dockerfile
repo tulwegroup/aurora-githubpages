@@ -7,37 +7,38 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Use proven tiangolo image built for FastAPI + uvicorn
-FROM tiangolo/uvicorn-gunicorn-fastapi:python3.11
+# Use Python base, NOT tiangolo (too much magic)
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-# Install Node.js for frontend serving
-RUN apt-get update && apt-get install -y \
-    curl gnupg && \
+# Install Node.js
+RUN apt-get update && apt-get install -y curl gnupg && \
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Copy and install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy package.json and install frontend dependencies
+# Copy package.json and install frontend deps
 COPY package.json ./
-RUN npm install --omit=prod
+RUN npm install --omit=dev
 
-# Copy built frontend dist
+# Copy built frontend
 COPY --from=frontend-build /app/dist ./dist
 
-# Copy backend source code
+# Copy backend and app files
 COPY backend ./backend
 COPY . .
+COPY app_wrapper.py ./main.py
 
-# Copy app_wrapper as the main app
-COPY app_wrapper.py /app/main.py
+# Unbuffered Python output
+ENV PYTHONUNBUFFERED=1
 
-# The tiangolo image automatically handles uvicorn startup
-# It looks for /app/main.py by default and runs it
-ENV APP_MODULE=main:app
-ENV LOG_LEVEL=info
+# CRITICAL: Expose port so Railway knows
+EXPOSE 8000
+
+# Start the app - simple and direct
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]

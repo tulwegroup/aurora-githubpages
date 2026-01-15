@@ -1,89 +1,83 @@
 """
 Wrapper that tries to load backend.main, but falls back to minimal if it fails
-This ensures we always get useful error messages
+This is the actual app object that uvicorn will load
 """
 import sys
 import logging
 import traceback
 import os
+from datetime import datetime
 
-# Force unbuffered output immediately
+# MUST be unbuffered for Railway logging
+os.environ['PYTHONUNBUFFERED'] = '1'
 sys.stdout.flush()
 sys.stderr.flush()
 
-# Set up logging with immediate flush
+# Configure logging FIRST with immediate flush
 class ImmediateFlushHandler(logging.StreamHandler):
     def emit(self, record):
-        super().emit(record)
-        self.flush()
+        try:
+            msg = self.format(record)
+            self.stream.write(msg + self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='[%(levelname)s] %(message)s',
-    handlers=[ImmediateFlushHandler(sys.stdout)]
-)
+handler = ImmediateFlushHandler(sys.stdout)
+handler.setFormatter(logging.Formatter('[%(levelname)s] %(message)s'))
+logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
 logger = logging.getLogger(__name__)
 
 logger.info("=" * 80)
-logger.info("AURORA OSI v3 - APP WRAPPER STARTING")
+logger.info("AURORA OSI v3 - APP WRAPPER LOADING")
 logger.info("=" * 80)
 logger.info(f"Python: {sys.version}")
-logger.info(f"Working directory: {os.getcwd()}")
+logger.info(f"CWD: {os.getcwd()}")
 logger.info(f"PYTHONPATH: {os.getenv('PYTHONPATH', 'not set')}")
 
-# Try to import the full backend
-try:
-    logger.info("[1/3] Attempting to import backend.main...")
-    from backend.main import app
-    logger.info("[2/3] ✓ backend.main imported successfully")
-    logger.info("[3/3] ✓ Using full backend app")
-    logger.info("=" * 80)
-    
-except Exception as e:
-    logger.error(f"[!] FAILED to import backend.main")
-    logger.error(f"[!] Error type: {type(e).__name__}")
-    logger.error(f"[!] Error message: {e}")
-    logger.error(f"[!] Traceback:\n{traceback.format_exc()}")
-    logger.warning("\n[FALLBACK] Loading minimal app instead...\n")
-    
-    # Fallback to minimal app
-    try:
-        from fastapi import FastAPI
-        from fastapi.responses import JSONResponse
-        from datetime import datetime
-        
-        app = FastAPI(
-            title="Aurora OSI v3 - Minimal (Fallback)",
-            version="3.1.0"
-        )
-        
-        @app.get("/system/health")
-        async def health_check():
-            """Health check endpoint"""
-            logger.info("[healthcheck] Received health check")
-            return JSONResponse({
-                "status": "ok",
-                "mode": "fallback",
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-                "service": "aurora-minimal"
-            }, status_code=200)
-        
-        @app.on_event("startup")
-        async def startup():
-            logger.error(f"FALLBACK MODE: Backend failed with: {e}")
-        
-        logger.info("=" * 80)
-        logger.info("✓ Minimal app loaded successfully")
-        logger.info("=" * 80)
-        
-    except Exception as fallback_error:
-        logger.error(f"CRITICAL: Even fallback failed: {fallback_error}")
-        logger.error(traceback.format_exc())
-        sys.exit(1)
+# Try to load real backend
+app = None
+backend_error = None
 
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    logger.info(f"Starting app on 0.0.0.0:{port}")
-    uvicorn.run(app, host="0.0.0.0", port=port, log_level="debug")
+try:
+    logger.info("Importing backend.main...")
+    from backend.main import app as backend_app
+    app = backend_app
+    logger.info("✓ Backend loaded successfully")
+except Exception as e:
+    logger.error(f"✗ Backend import failed: {type(e).__name__}: {e}")
+    backend_error = str(e)
+    logger.error(f"Traceback:\n{traceback.format_exc()}")
+
+# If backend failed, use fallback
+if app is None:
+    logger.warning("Creating fallback minimal app...")
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    
+    app = FastAPI(title="Aurora OSI v3 - Fallback", version="3.1.0")
+    
+    @app.get("/system/health")
+    async def health_check():
+        logger.info("Health check requested")
+        return JSONResponse({
+            "status": "ok",
+            "mode": "fallback",
+            "backend_error": backend_error,
+            "timestamp": datetime.now().isoformat(),
+            "service": "aurora-minimal"
+        }, status_code=200)
+    
+    @app.get("/")
+    async def root():
+        return JSONResponse({
+            "message": "Aurora OSI v3 (Fallback Mode)",
+            "status": "running",
+            "error": backend_error
+        })
+    
+    logger.info("✓ Fallback app initialized")
+
+logger.info("=" * 80)
+logger.info("APP READY FOR UVICORN")
+logger.info("=" * 80)
