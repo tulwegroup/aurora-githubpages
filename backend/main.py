@@ -14,7 +14,8 @@ import logging
 import os
 from pathlib import Path
 
-from models import (
+# Use relative imports for backend modules
+from .models import (
     MineralDetectionRequest,
     MineralDetectionResult,
     DigitalTwinQuery,
@@ -23,10 +24,10 @@ from models import (
     DetectionTier,
     VoxelData
 )
-from database import get_db
-from database.spectral_library import SPECTRAL_LIBRARY
-from config import settings
-from routers import system
+from .database import get_db
+from .database.spectral_library import SPECTRAL_LIBRARY
+from .config import settings
+from .routers import system
 
 # Configure logging for Cloud Run
 log_level = settings.get_log_level()
