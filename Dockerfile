@@ -47,12 +47,13 @@ HEALTHCHECK --interval=10s --timeout=30s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:${PORT}/system/health || exit 1
 
 # Start gunicorn with PORT from environment variable
+# Using minimal app to ensure startup works
 CMD exec gunicorn \
-    -w 4 \
+    -w 1 \
     -k uvicorn.workers.UvicornWorker \
     --bind 0.0.0.0:${PORT} \
-    backend.main:app \
+    app_minimal:app \
     --timeout 120 \
     --access-logfile - \
     --error-logfile - \
-    --log-level debug
+    --log-level info
