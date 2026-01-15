@@ -1,15 +1,2 @@
-# Explicit configuration to force Python provider detection
-[buildPacks]
-# Force inclusion of both Python and Node providers
-providers = ["python", "node"]
+# Config moved to root-level .nixpacks.toml file
 
-[phases.install]
-# Override the default install phase to include pip install
-cmds = [
-  "pip install --no-cache-dir -r requirements.txt",
-  "npm i"
-]
-
-[phases.build]
-# Build frontend
-cmds = ["npm run build"]
