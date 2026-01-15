@@ -1,2 +1,7 @@
-# Config moved to root-level .nixpacks.toml file
+# Call build.sh to install Python dependencies
+[phases.build]
+cmds = [
+  "bash .nixpacks/build.sh",
+  "npm run build"
+]
 
