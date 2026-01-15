@@ -42,9 +42,13 @@ COPY . .
 ENV PYTHONUNBUFFERED=true
 ENV PORT=8000
 
+# Copy entrypoint script
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Health check - call /system/health endpoint directly
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/system/health || exit 1
 
-# Start server - use shell form (not JSON array) so $PORT is expanded
-CMD sh -c 'echo "Starting Aurora OSI v3 on PORT: ${PORT:-8000}" && exec uvicorn app_wrapper:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug'
+# Use ENTRYPOINT so it always runs, even if Railway overrides CMD
+ENTRYPOINT ["./entrypoint.sh"]
