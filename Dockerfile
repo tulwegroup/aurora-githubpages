@@ -42,13 +42,13 @@ COPY . .
 ENV PYTHONUNBUFFERED=true
 ENV PORT=8000
 
-# Copy entrypoint script
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
+# Copy Python entrypoint script
+COPY entrypoint.py .
+RUN chmod +x entrypoint.py
 
 # Health check - call /system/health endpoint directly
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/system/health || exit 1
 
-# Use ENTRYPOINT so it always runs, even if Railway overrides CMD
-ENTRYPOINT ["./entrypoint.sh"]
+# Use Python entrypoint - cannot be overridden by Railway start command
+ENTRYPOINT ["python", "entrypoint.py"]
