@@ -54,4 +54,5 @@ CMD exec gunicorn \
     backend.main:app \
     --timeout 120 \
     --access-logfile - \
-    --error-logfile -
+    --error-logfile - \
+    --log-level debug

@@ -21,8 +21,15 @@ class DatabaseManager:
             "postgresql://user:password@localhost:5432/aurora_osi"
         )
         self.connection_pool: Optional[pool.SimpleConnectionPool] = None
+        self._initialized = False
+
+    def _ensure_initialized(self):
+        """Lazy initialization - only init when first needed"""
+        if self._initialized:
+            return
         self._init_pool()
         self._init_schema()
+        self._initialized = True
 
     def _init_pool(self):
         """Initialize connection pool"""
@@ -36,6 +43,7 @@ class DatabaseManager:
     @contextmanager
     def get_connection(self):
         """Context manager for database connections"""
+        self._ensure_initialized()
         conn = self.connection_pool.getconn()
         try:
             yield conn
