@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
 import os
@@ -31,6 +31,13 @@ except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not import SPECTRAL_LIBRARY: {str(e)}")
     SPECTRAL_LIBRARY = None
+try:
+    from .integrations.gee_fetcher import GEEDataFetcher
+    gee_fetcher = GEEDataFetcher()
+except Exception as e:
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"⚠️ Could not initialize GEE: {str(e)}")
+    gee_fetcher = None
 from .config import settings
 from .routers import system
 
@@ -347,6 +354,130 @@ async def quantum_assisted_inversion(inversion_data: Dict) -> Dict:
         "quantum_backend": "qaoa",
         "classical_refinement_iterations": 5,
         "expected_speedup": "2-5x vs classical"
+    }
+
+
+# ===== GOOGLE EARTH ENGINE ENDPOINTS =====
+
+@app.post("/gee/sentinel2")
+async def fetch_sentinel2_data(request: Dict) -> Dict:
+    """
+    Fetch Sentinel-2 satellite data for coordinates
+    
+    Request body:
+    {
+        "latitude": float,
+        "longitude": float,
+        "date_start": "YYYY-MM-DD",
+        "date_end": "YYYY-MM-DD"
+    }
+    """
+    if not gee_fetcher:
+        raise HTTPException(status_code=503, detail="Google Earth Engine not initialized")
+    
+    try:
+        lat = request.get("latitude")
+        lon = request.get("longitude")
+        date_start = request.get("date_start", (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"))
+        date_end = request.get("date_end", datetime.now().strftime("%Y-%m-%d"))
+        
+        if not lat or not lon:
+            raise HTTPException(status_code=400, detail="latitude and longitude required")
+        
+        data = gee_fetcher.fetch_sentinel2(lat, lon, date_start, date_end)
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="No Sentinel-2 data found for location/date range")
+        
+        logger.info(f"✓ Fetched Sentinel-2 data for ({lat}, {lon}) - Cloud: {data.cloud_coverage:.1f}%")
+        
+        return {
+            "sensor": data.sensor,
+            "date": data.date.isoformat(),
+            "latitude": data.latitude,
+            "longitude": data.longitude,
+            "cloud_coverage_percent": data.cloud_coverage,
+            "resolution_m": data.resolution_m,
+            "bands": {k: float(v) for k, v in data.bands.items()}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"✗ Sentinel-2 fetch error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/gee/landsat8")
+async def fetch_landsat8_data(request: Dict) -> Dict:
+    """
+    Fetch Landsat-8 satellite data for coordinates
+    
+    Request body:
+    {
+        "latitude": float,
+        "longitude": float,
+        "date_start": "YYYY-MM-DD",
+        "date_end": "YYYY-MM-DD"
+    }
+    """
+    if not gee_fetcher:
+        raise HTTPException(status_code=503, detail="Google Earth Engine not initialized")
+    
+    try:
+        lat = request.get("latitude")
+        lon = request.get("longitude")
+        date_start = request.get("date_start", (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"))
+        date_end = request.get("date_end", datetime.now().strftime("%Y-%m-%d"))
+        
+        if not lat or not lon:
+            raise HTTPException(status_code=400, detail="latitude and longitude required")
+        
+        data = gee_fetcher.fetch_landsat8(lat, lon, date_start, date_end)
+        
+        if not data:
+            raise HTTPException(status_code=404, detail="No Landsat-8 data found for location/date range")
+        
+        logger.info(f"✓ Fetched Landsat-8 data for ({lat}, {lon}) - Cloud: {data.cloud_coverage:.1f}%")
+        
+        return {
+            "sensor": data.sensor,
+            "date": data.date.isoformat(),
+            "latitude": data.latitude,
+            "longitude": data.longitude,
+            "cloud_coverage_percent": data.cloud_coverage,
+            "resolution_m": data.resolution_m,
+            "bands": {k: float(v) for k, v in data.bands.items()}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"✗ Landsat-8 fetch error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/gee/available-sensors")
+async def list_available_sensors() -> Dict:
+    """List available satellite sensors"""
+    return {
+        "sensors": [
+            {
+                "name": "Sentinel-2",
+                "endpoint": "/gee/sentinel2",
+                "resolution_m": 10,
+                "bands": 13,
+                "coverage": "Global",
+                "revisit_days": 5
+            },
+            {
+                "name": "Landsat-8",
+                "endpoint": "/gee/landsat8",
+                "resolution_m": 30,
+                "bands": 11,
+                "coverage": "Global",
+                "revisit_days": 16
+            }
+        ],
+        "status": "operational" if gee_fetcher else "unavailable"
     }
 
 
