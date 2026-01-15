@@ -46,5 +46,5 @@ ENV PORT=8000
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/system/health || exit 1
 
-# Start server with wrapper that falls back to minimal if backend fails
-CMD ["sh", "-c", "echo 'PORT: '${PORT} && echo 'Starting app wrapper...' && exec uvicorn app_wrapper:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
+# Start server - use shell form (not JSON array) so $PORT is expanded
+CMD sh -c 'echo "Starting Aurora OSI v3 on PORT: ${PORT:-8000}" && exec uvicorn app_wrapper:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug'
