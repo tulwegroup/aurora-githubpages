@@ -2,27 +2,41 @@
 Minimal FastAPI app for health checks and status
 This is the entry point to ensure the app starts even if backend has issues
 """
-
-from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+import sys
 import logging
-import os
-from datetime import datetime
 
-# Configure logging
+# Configure logging FIRST before any imports
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG,
+    format='[%(asctime)s] [%(levelname)s] %(message)s',
+    stream=sys.stdout
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="Aurora OSI v3 - Minimal",
-    description="Health check endpoint",
-    version="3.1.0"
-)
+logger.info("=" * 60)
+logger.info("STARTING AURORA OSI v3 MINIMAL APP")
+logger.info("=" * 60)
 
-logger.info("✓ Minimal FastAPI app initialized")
+try:
+    from fastapi import FastAPI
+    from fastapi.responses import JSONResponse
+    import os
+    from datetime import datetime
+    
+    logger.info("✓ All imports successful")
+    
+    app = FastAPI(
+        title="Aurora OSI v3 - Minimal",
+        description="Health check endpoint",
+        version="3.1.0"
+    )
+    
+    logger.info("✓ FastAPI app initialized")
+    logger.info("=" * 60)
+    
+except Exception as e:
+    logger.error(f"FATAL: Failed to initialize app: {e}", exc_info=True)
+    sys.exit(1)
 
 
 @app.get("/system/health")
