@@ -42,18 +42,13 @@ COPY . .
 ENV PYTHONUNBUFFERED=true
 ENV PORT=8000
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=30s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/system/health || exit 1
+# Copy startup scripts
+COPY start_server.sh healthcheck.sh ./
+RUN chmod +x start_server.sh healthcheck.sh
 
-# Start gunicorn with PORT from environment variable
-# Using minimal app to ensure startup works
-CMD exec gunicorn \
-    -w 1 \
-    -k uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:${PORT} \
-    app_minimal:app \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile - \
-    --log-level info
+# Health check - use the healthcheck script
+HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
+    CMD ./healthcheck.sh
+
+# Start the server with the startup script
+CMD ["./start_server.sh"]
