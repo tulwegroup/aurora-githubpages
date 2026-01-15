@@ -7,13 +7,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
+# Copy backend code only
 COPY backend ./backend
 COPY app_wrapper.py ./main.py
-COPY config.py .
-COPY constants.ts .
-COPY types.ts .
-COPY models.py .
 
 # Unbuffered logging
 ENV PYTHONUNBUFFERED=1
