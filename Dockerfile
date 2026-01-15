@@ -14,8 +14,9 @@ COPY app_wrapper.py ./main.py
 # Unbuffered logging
 ENV PYTHONUNBUFFERED=1
 
-# Port
+# Port - default to 8000 if PORT env var not set
+ENV PORT=8000
 EXPOSE 8000
 
-# Start - dead simple
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start with PORT environment variable
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT}"]
