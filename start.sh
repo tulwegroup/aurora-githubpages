@@ -26,7 +26,7 @@ pip install --no-cache-dir -r requirements.txt
 
 # Run migrations
 echo "🗄️  Running database migrations..."
-python3 -c "from database import db; print('✓ Database initialized')"
+python3 -c "from database import get_db; print('✓ Database lazy-initialized')"
 
 # Start FastAPI with Gunicorn
 echo "🚀 Starting FastAPI backend..."

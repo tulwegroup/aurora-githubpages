@@ -23,7 +23,7 @@ from models import (
     DetectionTier,
     VoxelData
 )
-from database import db
+from database import get_db
 from database.spectral_library import SPECTRAL_LIBRARY
 from config import settings
 from routers import system
@@ -70,7 +70,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
-    db.close()
+    get_db().close()
     logger.info("🛑 Aurora OSI v3 Backend Shutdown")
 
 
@@ -141,7 +141,7 @@ async def detect_mineral(request: MineralDetectionRequest) -> MineralDetectionRe
         )
         
         # Store in database
-        db.insert_detection({
+        get_db().insert_detection({
             "mineral": request.mineral,
             "latitude": request.latitude,
             "longitude": request.longitude,
@@ -241,7 +241,7 @@ async def get_twin_status(region: str) -> Dict:
 async def create_satellite_task(request: SatelliteTaskingRequest, background_tasks: BackgroundTasks) -> Dict:
     """Create autonomous satellite tasking request"""
     try:
-        task_id = db.create_satellite_task({
+        task_id = get_db().create_satellite_task({
             "latitude": request.latitude,
             "longitude": request.longitude,
             "sensor_type": request.sensor_type,
@@ -311,7 +311,7 @@ async def get_seismic_amplitude(survey_id: str, inline: int, crossline: int, dep
 @app.get("/physics/residuals")
 async def get_physics_residuals(region: Optional[str] = None) -> Dict:
     """Get physics residual violations"""
-    residuals = db.get_physics_residuals(region or "global")
+    residuals = get_db().get_physics_residuals(region or "global")
     return {
         "residual_count": len(residuals),
         "severity_high": len([r for r in residuals if r["severity"] == "high"]),

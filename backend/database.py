@@ -282,5 +282,17 @@ class DatabaseManager:
             self.connection_pool.closeall()
 
 
-# Global database instance
-db = DatabaseManager()
+# Global database instance - lazy initialized on first use
+_db_instance: Optional[DatabaseManager] = None
+
+
+def get_db() -> DatabaseManager:
+    """Get or create global database instance"""
+    global _db_instance
+    if _db_instance is None:
+        _db_instance = DatabaseManager()
+    return _db_instance
+
+
+# For backward compatibility
+db = property(lambda self: get_db())
