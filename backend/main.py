@@ -65,7 +65,11 @@ app.include_router(system.router)
 async def startup_event():
     """Initialize on startup"""
     logger.info("🚀 Aurora OSI v3 Backend Starting")
-    logger.info(f"📚 Spectral Library loaded with {len(SPECTRAL_LIBRARY.get_all_minerals())} minerals")
+    try:
+        mineral_count = len(SPECTRAL_LIBRARY.get_all_minerals())
+        logger.info(f"📚 Spectral Library loaded with {mineral_count} minerals")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not load spectral library: {str(e)}")
 
 
 @app.on_event("shutdown")
@@ -80,15 +84,10 @@ async def shutdown_event():
 @app.get("/health")
 @app.get("/system/health")
 async def health_check():
-    """System health check"""
+    """System health check - lightweight endpoint for load balancer"""
     return {
         "status": "operational",
-        "timestamp": datetime.now().isoformat(),
-        "components": {
-            "spectral_library": "operational",
-            "database": "operational",
-            "quantum_interface": "operational"
-        }
+        "version": "3.1.0"
     }
 
 
