@@ -46,5 +46,5 @@ ENV PORT=8000
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8000}/system/health || exit 1
 
-# Start server with uvicorn - add explicit logging for debugging
-CMD ["sh", "-c", "echo 'PORT is: '${PORT} && echo 'Starting uvicorn...' && exec uvicorn app_minimal:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
+# Start server with wrapper that falls back to minimal if backend fails
+CMD ["sh", "-c", "echo 'PORT: '${PORT} && echo 'Starting app wrapper...' && exec uvicorn app_wrapper:app --host 0.0.0.0 --port ${PORT:-8000} --log-level debug"]
