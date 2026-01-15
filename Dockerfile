@@ -42,13 +42,9 @@ COPY . .
 ENV PYTHONUNBUFFERED=true
 ENV PORT=8000
 
-# Copy startup scripts
-COPY start_server.sh healthcheck.sh ./
-RUN chmod +x start_server.sh healthcheck.sh
-
-# Health check - use the healthcheck script
+# Health check - call /system/health endpoint directly
 HEALTHCHECK --interval=10s --timeout=30s --start-period=60s --retries=3 \
-    CMD ./healthcheck.sh
+    CMD curl -f http://localhost:${PORT:-8000}/system/health || exit 1
 
-# Start the server with the startup script
-CMD ["./start_server.sh"]
+# Start server with uvicorn - Railway will inject PORT environment variable
+CMD ["sh", "-c", "uvicorn app_minimal:app --host 0.0.0.0 --port ${PORT:-8000}"]

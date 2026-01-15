@@ -27,10 +27,10 @@ logger.info("✓ Minimal FastAPI app initialized")
 
 @app.get("/system/health")
 async def health_check():
-    """Health check endpoint - always responds"""
+    """Health check endpoint - returns ok for Railway"""
     logger.info("Health check received")
     return JSONResponse({
-        "status": "healthy",
+        "status": "ok",
         "timestamp": datetime.now().isoformat(),
         "version": "v3.0",
         "environment": os.getenv("ENVIRONMENT", "production"),
