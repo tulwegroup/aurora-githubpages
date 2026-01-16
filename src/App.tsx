@@ -11,18 +11,16 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 const ConfigView = lazy(() => import('./components/ConfigView'));
 const USHEView = lazy(() => import('./components/USHEView'));
 const ScanStatusMonitor = lazy(() => import('./components/ScanStatusMonitor'));
-
-// Stub components for missing views
-const OSILView = () => <div className="p-4">OSIL View</div>;
-const PCFCView = () => <div className="p-4">PCFC View</div>;
-const QSEView = () => <div className="p-4">QSE View</div>;
-const IETLView = () => <div className="p-4">IETL View</div>;
-const TMALView = () => <div className="p-4">TMAL View</div>;
-const DataLakeView = () => <div className="p-4">Data Lake View</div>;
-const DigitalTwinView = () => <div className="p-4">Digital Twin View</div>;
-const PortfolioView = () => <div className="p-4">Portfolio View</div>;
-const SeismicView = () => <div className="p-4">Seismic View</div>;
-const PlanetaryMapView = () => <div className="p-4">Planetary Map View</div>; 
+const OSILView = lazy(() => import('./components/OSILView'));
+const PCFCView = lazy(() => import('./components/PCFCView'));
+const QSEView = lazy(() => import('./components/QSEView'));
+const IETLView = lazy(() => import('./components/IETLView'));
+const TMALView = lazy(() => import('./components/TMALView'));
+const DataLakeView = lazy(() => import('./components/DataLakeView'));
+const DigitalTwinView = lazy(() => import('./components/DigitalTwinView'));
+const PortfolioView = lazy(() => import('./components/PortfolioView'));
+const SeismicView = lazy(() => import('./components/SeismicView'));
+const PlanetaryMapView = lazy(() => import('./components/PlanetaryMapView')); 
 
 interface ErrorBoundaryProps { children?: ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
