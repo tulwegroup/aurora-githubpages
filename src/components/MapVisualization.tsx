@@ -11,6 +11,8 @@ interface MapVisualizationProps {
   centerCoordinates?: string;
   className?: string;
   isGEEActive?: boolean;
+  showHistory?: boolean;
+  campaign?: any;
 }
 
 // Fix for default markers

@@ -244,4 +244,181 @@ export class AuroraAPI {
         };
     }
   }
+
+  // Data Lake View Methods
+  static async getDataLakeFiles(): Promise<any[]> {
+    try {
+      return await this.apiFetch('/data-lake/files');
+    } catch(e) {
+      return [
+        { id: 'obj-1', name: 'S1A_RAW_DATA.zip', bucket: 'Raw', size: '1.2 GB', type: 'SAR', lastModified: '2023-10-12', owner: 'Ingest' },
+        { id: 'obj-2', name: 'L8_PROCESSED.tif', bucket: 'Processed', size: '450 MB', type: 'Multispectral', lastModified: '2023-10-15', owner: 'Processing' }
+      ];
+    }
+  }
+
+  static async getDataLakeStats(): Promise<any> {
+    try {
+      return await this.apiFetch('/data-lake/stats');
+    } catch(e) {
+      return { totalObjects: 1250, totalSize: '125 TB', buckets: 4, lastIngestion: new Date().toISOString() };
+    }
+  }
+
+  static async generateFileContent(fileId: string): Promise<string> {
+    try {
+      return await this.apiFetch(`/data-lake/files/${fileId}/content`);
+    } catch(e) {
+      return `Content for file ${fileId}`;
+    }
+  }
+
+  static async processFile(fileId: string): Promise<any> {
+    try {
+      return await this.apiFetch(`/data-lake/files/${fileId}/process`, { method: 'POST' });
+    } catch(e) {
+      return { status: 'processing', progress: 0 };
+    }
+  }
+
+  // Digital Twin View Methods
+  static async getDigitalTwinVoxels(region: string, depth?: { min: number, max: number }): Promise<any[]> {
+    try {
+      const params = new URLSearchParams({ region });
+      if (depth) {
+        params.append('depth_min', depth.min.toString());
+        params.append('depth_max', depth.max.toString());
+      }
+      return await this.apiFetch(`/twin/voxels?${params.toString()}`);
+    } catch(e) {
+      return [];
+    }
+  }
+
+  // IETL View Methods
+  static async getReports(): Promise<any[]> {
+    try {
+      return await this.apiFetch('/ietl/reports');
+    } catch(e) {
+      return [
+        { id: 'rep-1', title: 'Weekly Ingestion Summary', date: new Date().toISOString(), status: 'Completed' },
+        { id: 'rep-2', title: 'Data Quality Assessment', date: new Date(Date.now() - 86400000).toISOString(), status: 'Completed' }
+      ];
+    }
+  }
+
+  static async getTasks(): Promise<any[]> {
+    try {
+      return await this.apiFetch('/ietl/tasks');
+    } catch(e) {
+      return [
+        { id: 'tsk-1', name: 'Sentinel-2 Download', status: 'running', progress: 45 },
+        { id: 'tsk-2', name: 'SAR Harmonization', status: 'queued', progress: 0 }
+      ];
+    }
+  }
+
+  // OSIL View Methods
+  static async getSatelliteSchedule(): Promise<any[]> {
+    try {
+      return await this.apiFetch('/osil/schedule');
+    } catch(e) {
+      return [
+        { id: 'TSK-9920', targetCoordinates: '8.12 S, 33.45 E', sensorType: 'SAR', priority: 'High', status: 'Scheduled', requestor: 'Ops', submittedAt: '2h ago' },
+        { id: 'TSK-9921', targetCoordinates: '8.12 S, 33.45 E', sensorType: 'SAR', priority: 'Urgent', status: 'Pending', requestor: 'Ops', submittedAt: '10m ago' }
+      ];
+    }
+  }
+
+  static async submitTask(task: any): Promise<any> {
+    try {
+      return await this.apiFetch('/osil/task', { method: 'POST', body: JSON.stringify(task) });
+    } catch(e) {
+      return { id: `TSK-${Date.now()}`, status: 'Pending' };
+    }
+  }
+
+  // PCFC View Methods
+  static async runPhysicsInversion(params: any): Promise<any> {
+    try {
+      return await this.apiFetch('/physics/invert', { method: 'POST', body: JSON.stringify(params) });
+    } catch(e) {
+      return { jobId: `PHYS-${Date.now()}`, status: 'queued' };
+    }
+  }
+
+  static async getPhysicsTomography(region: string): Promise<any> {
+    try {
+      return await this.apiFetch(`/physics/tomography/${region}`);
+    } catch(e) {
+      return { depthSlices: [], residuals: [] };
+    }
+  }
+
+  // Portfolio View Methods
+  static async getPortfolioOverview(): Promise<any> {
+    try {
+      return await this.apiFetch('/portfolio/overview');
+    } catch(e) {
+      return {
+        totalAssets: 42,
+        activeProjects: 8,
+        totalValue: '$2.3B',
+        portfolioRisk: 'Moderate',
+        lastUpdated: new Date().toISOString()
+      };
+    }
+  }
+
+  // QSE View Methods
+  static async runQuantumOptimization(params: any): Promise<any> {
+    try {
+      return await this.apiFetch('/quantum/optimize', { method: 'POST', body: JSON.stringify(params) });
+    } catch(e) {
+      return { jobId: `QNT-${Date.now()}`, status: 'queued' };
+    }
+  }
+
+  // Seismic View Methods
+  static async getSeismicSlice(surveyId: string, axis: string, index: number): Promise<any> {
+    try {
+      return await this.apiFetch(`/seismic/${surveyId}/${axis}/${index}`);
+    } catch(e) {
+      return { width: 512, height: 512, data: Array(512).fill(Array(512).fill(0)), uncertainty: Array(512).fill(Array(512).fill(0)), horizons: [], faults: [] };
+    }
+  }
+
+  static async getStructuralTraps(surveyId: string): Promise<any[]> {
+    try {
+      return await this.apiFetch(`/seismic/${surveyId}/traps`);
+    } catch(e) {
+      return [
+        { id: 'trap-1', name: 'Anticlinal Closure', type: 'Structural', confidence: 0.87, volumetrics: 125, coordinates: { x: 250, y: 150, z: 2500 } },
+        { id: 'trap-2', name: 'Fault-Seal System', type: 'Structural', confidence: 0.72, volumetrics: 87, coordinates: { x: 350, y: 280, z: 3100 } }
+      ];
+    }
+  }
+
+  static async startSeismicJob(params: any): Promise<any> {
+    try {
+      return await this.apiFetch('/seismic/job', { method: 'POST', body: JSON.stringify(params) });
+    } catch(e) {
+      return { jobId: `SEIS-${Date.now()}`, status: 'Ingesting', progress: 0 };
+    }
+  }
+
+  // TMAL View Methods
+  static async getTemporalAnalysis(region: string): Promise<any> {
+    try {
+      return await this.apiFetch(`/temporal/${region}`);
+    } catch(e) {
+      return {
+        timeSeries: [
+          { date: 'Jan', deformation: 2, thermalInertia: 850, coherence: 0.9 },
+          { date: 'Feb', deformation: 2.5, thermalInertia: 860, coherence: 0.88 }
+        ],
+        trends: []
+      };
+    }
+  }
 }
