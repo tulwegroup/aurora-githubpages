@@ -318,74 +318,21 @@ const MapVisualization: React.FC<MapVisualizationProps> = React.memo(({
         }
       `}</style>
 
-      {/* Top Left: Controls - MOVED to BOTTOM LEFT to avoid collision with Dashboard Overlay */}
-      <div className="absolute bottom-6 left-4 z-[400] flex flex-col space-y-2 pointer-events-none">
-         <div className={`backdrop-blur-sm border rounded-lg px-3 py-1 text-xs font-mono flex items-center shadow-lg ${
-             isGEEActive 
-             ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-400 shadow-emerald-500/10' 
-             : 'bg-black/80 border-aurora-800 text-aurora-400'
-         }`}>
-           <Target size={12} className="mr-2 animate-pulse" /> {isGEEActive ? 'LIVE SATELLITE FEED' : 'TACTICAL MAP'}
-         </div>
-         
-         {!autoFit && (
-             <div className="bg-aurora-900/80 backdrop-blur-sm border border-aurora-700 rounded-lg px-3 py-1 text-xs font-mono text-emerald-400 flex items-center">
-                 <Radius size={12} className="mr-2" />
-                 RADIUS: {scanRadius} KM
-             </div>
-         )}
-         
-         {showHistory && effectiveHistory.length > 0 && (
-             <div className="bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg px-3 py-1 text-xs font-mono text-amber-400 flex items-center">
-                 <History size={12} className="mr-2" />
-                 HIVE MEMORY: {effectiveHistory.length} SITES
-             </div>
-         )}
-      </div>
-
-      {/* Top Right: Planetary Inventory HUD (New) */}
-      {autoFit && effectiveHistory.length > 0 && (
-          <div className="absolute top-4 right-4 z-[400] bg-slate-950/90 backdrop-blur border border-aurora-700 rounded-lg p-3 shadow-2xl min-w-[180px]">
-              <h4 className="text-[10px] font-bold text-slate-400 uppercase border-b border-slate-800 pb-1 mb-2 flex items-center">
-                  <Box size={10} className="mr-1" /> Resource Inventory
-              </h4>
-              <div className="space-y-1.5">
-                  {Object.entries(inventory).map(([type, stats]) => {
-                      const data = stats as { count: number; vol: number; unit: string };
-                      return (
-                      <div key={type} className="flex justify-between items-center text-xs">
-                          <span className={`font-bold ${type.includes('Gold') ? 'text-yellow-400' : type.includes('Lithium') ? 'text-purple-400' : type.includes('Hydrocarbon') ? 'text-red-400' : 'text-white'}`}>
-                              {type}
-                          </span>
-                          <div className="text-right">
-                              <span className="text-white font-mono">{data.vol.toFixed(0)}</span>
-                              <span className="text-[9px] text-slate-500 ml-1">{data.unit}</span>
-                          </div>
-                      </div>
-                  )})}
-              </div>
+      {/* Top Left: GPS Coordinates Display */}
+      <div className="absolute top-4 left-4 z-[400] bg-slate-950/90 backdrop-blur border border-aurora-700 rounded-lg px-4 py-3 shadow-2xl font-mono">
+          <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1">Target Coordinates</div>
+          <div className="text-sm font-bold text-aurora-300">
+              {centerLat.toFixed(6)}°, {centerLon.toFixed(6)}°
           </div>
-      )}
-
-      {/* Bottom Right: Legend */}
-      <div className="absolute bottom-4 right-4 z-[400] bg-slate-900/80 backdrop-blur p-2 rounded-lg border border-slate-700 text-[10px] text-slate-400 font-mono">
-          {!autoFit && (
-              <>
-                <div className="font-bold text-slate-300 mb-1 border-b border-slate-700 pb-1">Current Mission</div>
-                <div className="flex items-center space-x-2 mb-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div><span>CONFIRMED (&gt;70%)</span></div>
-                <div className="flex items-center space-x-2 mb-1"><div className="w-2 h-2 rounded-full bg-amber-500"></div><span>POSSIBLE (40-70%)</span></div>
-              </>
-          )}
-          
-          {showHistory && (
-              <>
-                  <div className="font-bold text-slate-300 mt-2 mb-1 border-b border-slate-700 pb-1">Discovery Type</div>
-                  <div className="flex items-center space-x-2 mb-1"><div className="w-2 h-2 rounded-full bg-yellow-400"></div><span>GOLD/PRECIOUS</span></div>
-                  <div className="flex items-center space-x-2 mb-1"><div className="w-2 h-2 rounded-full bg-purple-400"></div><span>LITHIUM/BATTERY</span></div>
-                  <div className="flex items-center space-x-2 mb-1"><div className="w-2 h-2 rounded-full bg-red-500"></div><span>HYDROCARBONS</span></div>
-              </>
-          )}
+          <div className="text-[9px] text-slate-500 mt-1">
+              {centerLat >= 0 ? 'N' : 'S'} / {centerLon >= 0 ? 'E' : 'W'}
+          </div>
       </div>
+
+      {/* Bottom Left: Removed TACTICAL MAP and RADIUS badges - now using plain map */}
+
+      {/* Top Right: Removed Current Mission and Discovery Type legend */}
+
     </div>
   );
 });
