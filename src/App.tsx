@@ -73,6 +73,7 @@ const ViewLoader = () => (
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AppView>('dashboard');
   const [campaign, setCampaign] = useState<ExplorationCampaign>(ACTIVE_CAMPAIGN);
+  const [campaigns, setCampaigns] = useState<ExplorationCampaign[]>([ACTIVE_CAMPAIGN]);
   const [customLogo, setCustomLogo] = useState<string | null>(null);
   const [isBooting, setIsBooting] = useState(true);
   const [bootStep, setBootStep] = useState('Initializing Secure Enclave...');
