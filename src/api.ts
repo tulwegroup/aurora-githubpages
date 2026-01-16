@@ -369,12 +369,13 @@ export class AuroraAPI {
             name: 'Bolivian Lithium Prospect',
             type: 'Mineral Exploration',
             status: {
-              phase: 'advanced_exploration',
+              lifecycle_stage: 'advanced_exploration',
               risk_profile: 'Medium'
             },
             economics: {
               npv_usd: 450000000,
-              roi_percent: 28.5
+              roi_percent: 28.5,
+              gross_value_usd: 1200000000
             },
             esg: {
               carbon_intensity: 12.5
@@ -385,12 +386,13 @@ export class AuroraAPI {
             name: 'North Sea Gas Field',
             type: 'Oil & Gas',
             status: {
-              phase: 'production',
+              lifecycle_stage: 'production',
               risk_profile: 'Low'
             },
             economics: {
               npv_usd: 780000000,
-              roi_percent: 42.1
+              roi_percent: 42.1,
+              gross_value_usd: 1850000000
             },
             esg: {
               carbon_intensity: 28.3
@@ -401,12 +403,13 @@ export class AuroraAPI {
             name: 'Rare Earth Elements Project',
             type: 'Mineral Exploration',
             status: {
-              phase: 'prefeasibility',
+              lifecycle_stage: 'prefeasibility',
               risk_profile: 'High'
             },
             economics: {
               npv_usd: 650000000,
-              roi_percent: 65.2
+              roi_percent: 65.2,
+              gross_value_usd: 1500000000
             },
             esg: {
               carbon_intensity: 19.8

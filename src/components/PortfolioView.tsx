@@ -35,7 +35,7 @@ const PortfolioView: React.FC = () => {
     }, []);
 
     // Transform for Scatter Plot (Risk vs Reward)
-    const scatterData = data?.assets.map(a => ({
+    const scatterData = (data?.assets || []).map(a => ({
         x: a.status.risk_profile === 'Low' ? 10 : a.status.risk_profile === 'Medium' ? 50 : 90, // Risk Score
         y: a.economics.roi_percent, // ROI
         z: a.economics.npv_usd / 1000000, // Bubble Size (NPV in Millions)
@@ -43,7 +43,7 @@ const PortfolioView: React.FC = () => {
         type: a.type,
         risk: a.status.risk_profile,
         id: a.id
-    })) || [];
+    }));
 
     const handleOpenDealRoom = () => {
         if (activeAsset) {
