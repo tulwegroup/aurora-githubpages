@@ -158,7 +158,7 @@ export class AuroraAPI {
                     drillTargets: [],
                     radius: active.radius_km || 50,
                     dataVolumeEstimate: 0,
-                    currentPhase: 'Reconnaissance',
+                    currentPhase: 'Acquisition',
                     phaseIndex: 0,
                     phaseProgress: active.progress || 0,
                     startDate: new Date().toISOString(),
@@ -189,8 +189,23 @@ export class AuroraAPI {
                 id: s.scan_id || s.id,
                 name: s.name || 'Scan',
                 targetCoordinates: s.aoi || '',
-                status: s.status || 'Pending',
-                phaseProgress: s.progress || 0
+                regionName: s.region || '',
+                resourceType: s.minerals?.[0] || '',
+                targetElement: s.minerals?.[0] || '',
+                targets: [],
+                results: [],
+                drillTargets: [],
+                radius: s.radius_km || 50,
+                dataVolumeEstimate: 0,
+                currentPhase: 'Acquisition',
+                phaseIndex: 0,
+                phaseProgress: s.progress || 0,
+                startDate: new Date().toISOString(),
+                accuracyScore: 0.85,
+                status: (s.status === 'active' ? 'Active' : s.status === 'completed' ? 'Completed' : 'Paused') as 'Active' | 'Completed' | 'Paused',
+                iteration: 1,
+                priorsLoaded: false,
+                autoPlay: false
             })) : [ACTIVE_CAMPAIGN];
         }
     } catch(e) {}
