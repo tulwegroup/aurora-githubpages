@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 interface MapVisualizationProps {
   anomalies?: any[];
@@ -8,6 +9,7 @@ interface MapVisualizationProps {
   selectedAnomaly?: any;
   centerCoordinates?: string;
   className?: string;
+  isGEEActive?: boolean;
 }
 
 // Fix for default markers

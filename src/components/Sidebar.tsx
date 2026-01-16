@@ -1,11 +1,21 @@
 import React from 'react';
+import { AppView } from '../types';
 
-interface SidebarProps {
-  currentView: string;
-  onNavigate: (view: string) => void;
+export interface SidebarProps {
+  currentView?: string;
+  onNavigate?: (view: string) => void;
+  activeTab?: AppView;
+  setActiveTab?: React.Dispatch<React.SetStateAction<AppView>>;
+  customLogo?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
+const Sidebar: React.FC<SidebarProps> = ({ 
+  currentView, 
+  onNavigate,
+  activeTab,
+  setActiveTab,
+  customLogo
+}) => {
   return (
     <aside className="w-64 bg-aurora-950 border-r border-aurora-800 p-4 h-screen overflow-y-auto">
       <div className="space-y-4">
