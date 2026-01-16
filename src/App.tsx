@@ -1,5 +1,5 @@
 import React, { Component, useState, useEffect, Suspense, lazy, ErrorInfo, ReactNode } from 'react';
-import Sidebar from '../components/Sidebar';
+import Sidebar from './components/Sidebar';
 import { Bell, Search, User, ShieldCheck, Server, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { ExplorationCampaign, CAMPAIGN_PHASES, AppView, HiveMindState, MineralAgentType } from './types';
 import { ACTIVE_CAMPAIGN } from './constants';
@@ -7,19 +7,19 @@ import { AuroraAPI } from './api';
 import { APP_CONFIG } from './config';
 
 // --- LAZY LOAD SUB-SYSTEMS ---
-const Dashboard = lazy(() => import('../components/Dashboard'));
-const OSILView = lazy(() => import('../components/OSILView'));
-const PCFCView = lazy(() => import('../components/PCFCView'));
-const USHEView = lazy(() => import('../components/USHEView'));
-const QSEView = lazy(() => import('../components/QSEView'));
-const IETLView = lazy(() => import('../components/IETLView'));
-const TMALView = lazy(() => import('../components/TMALView'));
-const ConfigView = lazy(() => import('../components/ConfigView'));
-const DataLakeView = lazy(() => import('../components/DataLakeView'));
-const DigitalTwinView = lazy(() => import('../components/DigitalTwinView'));
-const PortfolioView = lazy(() => import('../components/PortfolioView'));
-const SeismicView = lazy(() => import('../components/SeismicView'));
-const PlanetaryMapView = lazy(() => import('../components/PlanetaryMapView')); 
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const OSILView = lazy(() => import('./components/OSILView'));
+const PCFCView = lazy(() => import('./components/PCFCView'));
+const USHEView = lazy(() => import('./components/USHEView'));
+const QSEView = lazy(() => import('./components/QSEView'));
+const IETLView = lazy(() => import('./components/IETLView'));
+const TMALView = lazy(() => import('./components/TMALView'));
+const ConfigView = lazy(() => import('./components/ConfigView'));
+const DataLakeView = lazy(() => import('./components/DataLakeView'));
+const DigitalTwinView = lazy(() => import('./components/DigitalTwinView'));
+const PortfolioView = lazy(() => import('./components/PortfolioView'));
+const SeismicView = lazy(() => import('./components/SeismicView'));
+const PlanetaryMapView = lazy(() => import('./components/PlanetaryMapView')); 
 
 interface ErrorBoundaryProps { children?: ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }

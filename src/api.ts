@@ -150,8 +150,23 @@ export class AuroraAPI {
                     id: active.scan_id || active.id,
                     name: active.name || 'Active Scan',
                     targetCoordinates: active.aoi || '',
+                    regionName: active.region || '',
+                    resourceType: active.minerals?.[0] || '',
+                    targetElement: active.minerals?.[0] || '',
+                    targets: [],
+                    results: [],
+                    drillTargets: [],
+                    radius: active.radius_km || 50,
+                    dataVolumeEstimate: 0,
+                    currentPhase: 'Reconnaissance',
+                    phaseIndex: 0,
+                    phaseProgress: active.progress || 0,
+                    startDate: new Date().toISOString(),
+                    accuracyScore: 0.85,
                     status: 'Active',
-                    phaseProgress: active.progress || 0
+                    iteration: 1,
+                    priorsLoaded: false,
+                    autoPlay: false
                 };
             }
         }
@@ -204,11 +219,13 @@ export class AuroraAPI {
         // Fallback: generate local report in Sovereign mode
         return {
             id: campaign.jobId || 'report-local',
-            campaign_id: campaign.id,
-            generated_at: new Date().toISOString(),
+            title: `Spectral Analysis Report`,
+            date: new Date().toISOString(),
+            region: campaign.regionName || campaign.targetCoordinates,
+            priority: 'High',
             summary: `Spectral analysis complete for ${campaign.regionName || campaign.targetCoordinates}`,
-            confidence: 0.85,
-            findings: []
+            tags: campaign.targets.map(t => t.resourceType),
+            status: 'Published'
         };
     }
   }
