@@ -355,12 +355,64 @@ export class AuroraAPI {
     try {
       return await this.apiFetch('/portfolio/overview');
     } catch(e) {
+      // Return mock portfolio data matching PortfolioSummary structure
       return {
-        totalAssets: 42,
-        activeProjects: 8,
-        totalValue: '$2.3B',
-        portfolioRisk: 'Moderate',
-        lastUpdated: new Date().toISOString()
+        summary: {
+          total_npv_usd: 2300000000,
+          asset_count: 42,
+          total_diesel_saved_l: 1200000,
+          total_water_saved_m3: 450000
+        },
+        assets: [
+          {
+            id: 'AST-001',
+            name: 'Bolivian Lithium Prospect',
+            type: 'Mineral Exploration',
+            status: {
+              phase: 'advanced_exploration',
+              risk_profile: 'Medium'
+            },
+            economics: {
+              npv_usd: 450000000,
+              roi_percent: 28.5
+            },
+            esg: {
+              carbon_intensity: 12.5
+            }
+          },
+          {
+            id: 'AST-002',
+            name: 'North Sea Gas Field',
+            type: 'Oil & Gas',
+            status: {
+              phase: 'production',
+              risk_profile: 'Low'
+            },
+            economics: {
+              npv_usd: 780000000,
+              roi_percent: 42.1
+            },
+            esg: {
+              carbon_intensity: 28.3
+            }
+          },
+          {
+            id: 'AST-003',
+            name: 'Rare Earth Elements Project',
+            type: 'Mineral Exploration',
+            status: {
+              phase: 'prefeasibility',
+              risk_profile: 'High'
+            },
+            economics: {
+              npv_usd: 650000000,
+              roi_percent: 65.2
+            },
+            esg: {
+              carbon_intensity: 19.8
+            }
+          }
+        ]
       };
     }
   }
