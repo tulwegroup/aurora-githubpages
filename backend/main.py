@@ -80,6 +80,13 @@ async def startup_event():
     """Initialize on startup - non-blocking"""
     global _startup_complete
     logger.info("🚀 Aurora OSI v3 Backend Starting")
+    
+    # Initialize background scan scheduler
+    try:
+        initialize_scan_scheduler()
+    except Exception as e:
+        logger.warning(f"⚠️ Scan scheduler initialization failed: {str(e)}")
+    
     # Log startup but don't block on anything
     logger.info("✓ Backend initialization complete")
     _startup_complete = True
@@ -88,6 +95,11 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
+    try:
+        shutdown_scan_scheduler()
+    except Exception as e:
+        logger.warning(f"⚠️ Scan scheduler shutdown error: {str(e)}")
+    
     get_db().close()
     logger.info("🛑 Aurora OSI v3 Backend Shutdown")
 
@@ -481,7 +493,104 @@ async def list_available_sensors() -> Dict:
     }
 
 
-# ===== HELPER FUNCTIONS =====
+# ===== ADVANCED SCANNING ENDPOINTS =====
+
+@app.post("/scans")
+async def create_scan(request: ScanRequest) -> Dict:
+    """
+    Create a new scan operation
+    Supports point, radius (0-200km), and grid scans
+    Scans run in background even when app is closed
+    
+    Examples:
+    - Point scan: scan_type="point", latitude=X, longitude=Y
+    - Radius scan: scan_type="radius", latitude=X, longitude=Y, radius_km=50
+    - Grid scan: scan_type="grid", latitude=X, longitude=Y, grid_spacing_m=30
+    - Country scan: scan_type="radius", country="Tanzania", radius_km=200
+    """
+    try:
+        scan_id = await scan_manager.create_scan(request)
+        
+        return {
+            "scan_id": scan_id,
+            "status": "pending",
+            "location": f"{request.country or request.latitude}, {request.longitude}",
+            "scan_type": request.scan_type.value,
+            "minerals": request.minerals,
+            "message": f"Scan {scan_id} queued for background processing"
+        }
+    except Exception as e:
+        logger.error(f"✗ Scan creation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/scans")
+async def list_scans(limit: int = 100, offset: int = 0, status: Optional[str] = None) -> Dict:
+    """
+    List all scans with optional filtering
+    
+    Query parameters:
+    - limit: Number of scans to return (default: 100)
+    - offset: Pagination offset (default: 0)
+    - status: Filter by status (pending, running, completed, failed, archived)
+    """
+    try:
+        scans = await scan_manager.list_scans(limit, offset, status)
+        
+        return {
+            "total": len(scans),
+            "limit": limit,
+            "offset": offset,
+            "scans": scans
+        }
+    except Exception as e:
+        logger.error(f"✗ Scan listing error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/scans/{scan_id}")
+async def get_scan(scan_id: str) -> Dict:
+    """
+    Retrieve detailed scan information and results
+    Returns metadata, results, and summary for completed scans
+    """
+    try:
+        scan = await scan_manager.get_scan(scan_id)
+        
+        if not scan:
+            raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
+        
+        return scan
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"✗ Scan retrieval error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/scans/{scan_id}")
+async def delete_scan(scan_id: str) -> Dict:
+    """
+    Delete a scan and all its results from the repository
+    """
+    try:
+        success = await scan_manager.delete_scan(scan_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail=f"Scan {scan_id} not found")
+        
+        return {
+            "scan_id": scan_id,
+            "status": "deleted",
+            "message": f"Scan {scan_id} and all results have been archived"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"✗ Scan deletion error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 def _calculate_detection_confidence(mineral: str, lat: float, lon: float) -> float:
     """Calculate detection confidence"""
@@ -614,6 +723,9 @@ async def _schedule_satellite_acquisition(task_id: str):
 
 
 import asyncio
+from .models import ScanRequest, ScanMetadata, ScanHistoryResponse
+from .scan_manager import scan_manager
+from .scan_worker import initialize_scan_scheduler, shutdown_scan_scheduler
 
 
 if __name__ == "__main__":

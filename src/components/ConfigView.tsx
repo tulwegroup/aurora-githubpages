@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
     Server, Database, ShieldCheck, 
-    RefreshCw, Lock, Link, Save, Terminal, Activity, Zap, Info, Globe, Cpu
+    RefreshCw, Lock, Link, Save, Terminal, Activity, Zap, Info, Globe, Cpu,
+    MapPin, Radio, Layers, Search, BarChart3, Clock
 } from 'lucide-react';
 import { AuroraAPI } from '../api';
 
@@ -15,6 +16,33 @@ const ConfigView: React.FC = () => {
         latency: '0ms'
     });
     const [logs, setLogs] = useState<string[]>([]);
+
+    // Scan Configuration State
+    const [scanConfig, setScanConfig] = useState({
+        scanType: 'radius' as 'point' | 'radius' | 'grid',
+        latitude: -10.5,
+        longitude: -35.3,
+        country: 'Tanzania',
+        region: 'Tanzanian Craton',
+        radiusKm: 50,
+        gridSpacingM: 30,
+        minerals: ['gold', 'lithium', 'copper'],
+        resolution: 'native' as 'native' | 'high' | 'medium' | 'low',
+        sensor: 'Sentinel-2',
+        maxCloudCoverPercent: 20,
+        dateStart: '',
+        dateEnd: ''
+    });
+
+    const [scanHistory, setScanHistory] = useState<any[]>([]);
+    const [isScanning, setIsScanning] = useState(false);
+    const [selectedMinerals, setSelectedMinerals] = useState<Set<string>>(
+        new Set(scanConfig.minerals)
+    );
+
+    const availableMinerals = [
+        'gold', 'lithium', 'copper', 'iron', 'cobalt', 'nickel', 'tin', 'rare_earth', 'hydrocarbon'
+    ];
 
     const addLog = useCallback((msg: string) => {
         setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 12));
@@ -48,169 +76,488 @@ const ConfigView: React.FC = () => {
                 addLog(`Error: Connection refused for ${currentEndpoint}`);
             }
         } catch (e: any) {
-            addLog(`Critical: Handshake failure - ${e.message}`);
-            setStatus(prev => ({ ...prev, backend: 'UNREACHABLE' }));
+            addLog(`Error during diagnostics: ${e.message}`);
+            setStatus(prev => ({...prev, backend: 'ERROR'}));
         } finally {
             setIsChecking(false);
         }
-    }, [addLog, isChecking]);
+    }, [addLog]);
 
-    // Stable effect with correct dependency handling to stop flickering
+    const loadScanHistory = useCallback(async () => {
+        try {
+            const response = await fetch('/scans?limit=10');
+            if (response.ok) {
+                const data = await response.json();
+                setScanHistory(data.scans || []);
+                addLog(`Loaded ${data.scans?.length || 0} previous scans`);
+            }
+        } catch (e) {
+            addLog(`Failed to load scan history: ${e}`);
+        }
+    }, [addLog]);
+
+    const handleMineralToggle = (mineral: string) => {
+        const newSet = new Set(selectedMinerals);
+        if (newSet.has(mineral)) {
+            newSet.delete(mineral);
+        } else {
+            newSet.add(mineral);
+        }
+        setSelectedMinerals(newSet);
+        setScanConfig(prev => ({
+            ...prev,
+            minerals: Array.from(newSet)
+        }));
+    };
+
+    const handleStartScan = async () => {
+        if (selectedMinerals.size === 0) {
+            addLog('Error: Select at least one mineral to scan');
+            return;
+        }
+
+        setIsScanning(true);
+        addLog(`🔍 Initiating ${scanConfig.scanType} scan for ${Array.from(selectedMinerals).join(', ')}`);
+
+        try {
+            const requestBody = {
+                scan_type: scanConfig.scanType,
+                latitude: parseFloat(scanConfig.latitude as any),
+                longitude: parseFloat(scanConfig.longitude as any),
+                country: scanConfig.country || null,
+                region: scanConfig.region || null,
+                radius_km: scanConfig.scanType === 'radius' ? parseFloat(scanConfig.radiusKm as any) : 0,
+                grid_spacing_m: scanConfig.scanType === 'grid' ? parseFloat(scanConfig.gridSpacingM as any) : 30,
+                minerals: Array.from(selectedMinerals),
+                resolution: scanConfig.resolution,
+                sensor: scanConfig.sensor,
+                max_cloud_cover_percent: parseFloat(scanConfig.maxCloudCoverPercent as any),
+                date_start: scanConfig.dateStart || undefined,
+                date_end: scanConfig.dateEnd || undefined
+            };
+
+            const response = await fetch('/scans', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                addLog(`✓ Scan ${result.scan_id} queued - processing in background`);
+                
+                // Reload history
+                await loadScanHistory();
+            } else {
+                const error = await response.json();
+                addLog(`✗ Scan failed: ${error.detail || 'Unknown error'}`);
+            }
+        } catch (e: any) {
+            addLog(`✗ Scan request error: ${e.message}`);
+        } finally {
+            setIsScanning(false);
+        }
+    };
+
     useEffect(() => {
         runDiagnostics();
-        const interval = setInterval(runDiagnostics, 60000); // Check once per minute
+        loadScanHistory();
+        const interval = setInterval(runDiagnostics, 30000);
         return () => clearInterval(interval);
-    }, [runDiagnostics]);
+    }, []);
 
     const handleUrlUpdate = async () => {
         AuroraAPI.setBackendUrl(manualUrl);
         addLog(`System: Uplink redirected to ${manualUrl}`);
-        // Force immediate check
         setIsChecking(false);
-        setTimeout(runDiagnostics, 100);
+        setTimeout(() => runDiagnostics(), 100);
     };
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto pb-20 animate-fadeIn">
-            {/* Header: Infrastructure Governance */}
-            <div className="bg-aurora-900/40 border border-aurora-800 rounded-2xl p-8 relative overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                    <ShieldCheck size={160} />
-                </div>
-                <div className="flex justify-between items-start relative z-10">
-                    <div>
-                        <h2 className="text-3xl font-bold text-white flex items-center tracking-tight font-mono uppercase">
-                            <Lock className="mr-4 text-aurora-400" size={32} /> System_Governance
-                        </h2>
-                        <p className="text-slate-400 mt-2 max-w-2xl leading-relaxed">
-                            Aurora OSI v3 manages infrastructure parameters via encrypted server-side secrets. 
-                            If the system is <strong>UNREACHABLE</strong>, use the override below to specify your 
-                            Railway public URL.
-                        </p>
-                    </div>
-                    <button 
-                        onClick={runDiagnostics} 
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-8">
+            {/* Header */}
+            <div className="mb-12">
+                <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+                    <Server className="text-cyan-400" size={40} />
+                    Infrastructure & Mission Configuration
+                </h1>
+                <p className="text-slate-400">Query planetary data... Tanzania / Mozambique Belt</p>
+            </div>
+
+            {/* Sync Diagnostics Card */}
+            <div className="mb-8 bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-8 border border-cyan-500/20">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold flex items-center gap-3">
+                        <Radio className="text-green-400" size={28} />
+                        Sync_Diagnostics
+                    </h2>
+                    <button
+                        onClick={runDiagnostics}
                         disabled={isChecking}
-                        className="flex items-center space-x-2 px-4 py-2 bg-slate-900 border border-aurora-800 hover:border-aurora-500 text-white rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                        className="bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 px-6 py-2 rounded-lg flex items-center gap-2 transition"
                     >
                         <RefreshCw size={18} className={isChecking ? 'animate-spin' : ''} />
-                        <span className="text-xs font-bold font-mono">FORCE_PROBE</span>
+                        {isChecking ? 'CHECKING...' : 'RE-SYNC'}
                     </button>
+                </div>
+
+                {/* Live Uplink Protocol */}
+                <div className="bg-slate-900/50 rounded-lg p-6 mb-6">
+                    <p className="text-slate-300 mb-4">Manual Uplink Override</p>
+                    <div className="flex gap-3 mb-4">
+                        <input 
+                            type="text"
+                            value={manualUrl}
+                            onChange={(e) => setManualUrl(e.target.value)}
+                            className="flex-1 bg-black/50 border border-slate-600 rounded px-3 py-2 text-cyan-400 font-mono text-sm"
+                            placeholder="https://your-app.up.railway.app"
+                        />
+                        <button 
+                            onClick={handleUrlUpdate}
+                            className="bg-cyan-600 hover:bg-cyan-500 px-4 py-2 rounded flex items-center gap-2 transition"
+                        >
+                            <Save size={16} /> SYNCHRONIZE
+                        </button>
+                    </div>
+                    <p className="text-cyan-400 font-mono text-sm mb-4">TARGET: aurora-githubpages-production.up.railway.app</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-slate-800 rounded p-4">
+                            <p className="text-slate-400 text-sm mb-1">Backend</p>
+                            <p className={`text-lg font-bold ${status.backend === 'OPERATIONAL' ? 'text-green-400' : 'text-red-400'}`}>
+                                {status.backend}
+                            </p>
+                        </div>
+                        <div className="bg-slate-800 rounded p-4">
+                            <p className="text-slate-400 text-sm mb-1">Persistence</p>
+                            <p className={`text-lg font-bold ${status.database === 'SYNCHRONIZED' ? 'text-green-400' : 'text-yellow-400'}`}>
+                                {status.database}
+                            </p>
+                        </div>
+                        <div className="bg-slate-800 rounded p-4">
+                            <p className="text-slate-400 text-sm mb-1">Spectral Engine</p>
+                            <p className={`text-lg font-bold ${status.gee === 'KERNEL_ACTIVE' ? 'text-amber-400' : 'text-slate-400'}`}>
+                                {status.gee}
+                            </p>
+                        </div>
+                        <div className="bg-slate-800 rounded p-4">
+                            <p className="text-slate-400 text-sm mb-1">Latency</p>
+                            <p className="text-lg font-bold text-blue-400">{status.latency}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Infrastructure Status */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-slate-900/50 rounded-lg p-4">
+                        <p className="text-slate-300 mb-2">Compute Node</p>
+                        <p className="text-cyan-400 font-mono text-sm">Railway Cloud Platform</p>
+                        <p className="text-green-400 text-sm mt-2">✓ SYNCHRONIZED</p>
+                    </div>
+                    <div className="bg-slate-900/50 rounded-lg p-4">
+                        <p className="text-slate-300 mb-2">Persistence</p>
+                        <p className="text-cyan-400 font-mono text-sm">Neon Managed Storage</p>
+                        <p className="text-green-400 text-sm mt-2">✓ OPERATIONAL</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    
-                    {/* Manual Uplink Override - HIGHLIGHTED */}
-                    <div className="bg-slate-900 border-2 border-aurora-500/40 p-6 rounded-2xl shadow-[0_0_30px_rgba(34,211,238,0.1)] backdrop-blur-md">
-                        <div className="flex items-center mb-4">
-                            <div className="p-2 bg-aurora-500/20 rounded-lg mr-3">
-                                <Link size={20} className="text-aurora-400" />
-                            </div>
-                            <div>
-                                <h3 className="font-bold text-white text-sm uppercase tracking-widest">Manual Uplink Override</h3>
-                                <p className="text-[10px] text-slate-500 font-mono">ACTIVE_ORIGIN: {AuroraAPI.getActiveEndpoint()}</p>
-                            </div>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <input 
-                                type="text"
-                                value={manualUrl}
-                                onChange={(e) => setManualUrl(e.target.value)}
-                                className="flex-1 bg-black/50 border border-slate-700 rounded-xl px-4 py-3 text-sm font-mono text-emerald-400 focus:border-aurora-500 outline-none transition-all placeholder:text-slate-800"
-                                placeholder="https://your-app.up.railway.app"
-                            />
-                            <button 
-                                onClick={handleUrlUpdate}
-                                className="bg-aurora-600 hover:bg-aurora-500 text-white px-8 py-3 rounded-xl text-sm font-bold flex items-center justify-center transition-all shadow-lg active:scale-95"
-                            >
-                                <Save size={18} className="mr-2" /> SYNCHRONIZE
-                            </button>
-                        </div>
-                        <p className="mt-3 text-[10px] text-slate-600 flex items-center">
-                            <Info size={12} className="mr-1" /> Updates are persistent and stored in secure browser enclave.
-                        </p>
+            {/* Advanced Scanning Configuration */}
+            <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-8 border border-purple-500/20 mb-8">
+                <h2 className="text-2xl font-bold flex items-center gap-3 mb-6">
+                    <Search className="text-purple-400" size={28} />
+                    Advanced Scanning Configuration
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Scan Type */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Layers size={16} />
+                            Scan Type
+                        </label>
+                        <select
+                            value={scanConfig.scanType}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                scanType: e.target.value as any
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        >
+                            <option value="point">Point Scan (Single Location)</option>
+                            <option value="radius">Radius Scan (0-200km)</option>
+                            <option value="grid">Grid Scan (Full Coverage)</option>
+                        </select>
                     </div>
 
-                    {/* Status Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between h-40 shadow-inner">
-                            <div className="flex justify-between items-start">
-                                <Server className={status.backend === 'OPERATIONAL' ? 'text-emerald-400' : 'text-red-400'} size={24} />
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${status.backend === 'OPERATIONAL' ? 'bg-emerald-950 text-emerald-400 border-emerald-500/30' : 'bg-red-950 text-red-400 border-red-500/30'}`}>
-                                    {status.backend}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Compute Core</p>
-                                <p className="text-xs font-mono text-slate-400 mt-1">Railway Managed Proxy</p>
-                            </div>
-                        </div>
+                    {/* Latitude */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                            <MapPin size={16} />
+                            Latitude
+                        </label>
+                        <input
+                            type="number"
+                            step="0.0001"
+                            value={scanConfig.latitude}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                latitude: parseFloat(e.target.value)
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        />
+                    </div>
 
-                        <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between h-40 shadow-inner">
-                            <div className="flex justify-between items-start">
-                                <Database className={status.database === 'SYNCHRONIZED' ? 'text-aurora-400' : 'text-slate-500'} size={24} />
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${status.database === 'SYNCHRONIZED' ? 'bg-aurora-950 text-aurora-400 border-aurora-500/30' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
-                                    {status.database}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Persistence</p>
-                                <p className="text-xs font-mono text-slate-400 mt-1">Neon Serverless Storage</p>
-                            </div>
-                        </div>
+                    {/* Longitude */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Globe size={16} />
+                            Longitude
+                        </label>
+                        <input
+                            type="number"
+                            step="0.0001"
+                            value={scanConfig.longitude}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                longitude: parseFloat(e.target.value)
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        />
+                    </div>
 
-                        <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between h-40 shadow-inner">
-                            <div className="flex justify-between items-start">
-                                <Zap className={status.gee === 'KERNEL_ACTIVE' ? 'text-amber-400' : 'text-slate-500'} size={24} />
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${status.gee === 'KERNEL_ACTIVE' ? 'bg-amber-950 text-amber-400 border-amber-500/30' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
-                                    {status.gee}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Spectral Engine</p>
-                                <p className="text-xs font-mono text-slate-400 mt-1">Google Earth Engine</p>
-                            </div>
-                        </div>
+                    {/* Country */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Country</label>
+                        <input
+                            type="text"
+                            value={scanConfig.country}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                country: e.target.value
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                            placeholder="e.g., Tanzania"
+                        />
+                    </div>
 
-                        <div className="bg-slate-900/50 border border-slate-800 p-6 rounded-2xl flex flex-col justify-between h-40 shadow-inner">
-                            <div className="flex justify-between items-start">
-                                <Activity className="text-emerald-400" size={24} />
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-slate-950 text-emerald-400 border-emerald-500/30 font-mono">
-                                    {status.latency}
-                                </span>
-                            </div>
-                            <div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Handshake Health</p>
-                                <p className="text-xs font-mono text-slate-400 mt-1">Managed VPC Tunnel</p>
-                            </div>
+                    {/* Region */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Region</label>
+                        <input
+                            type="text"
+                            value={scanConfig.region}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                region: e.target.value
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                            placeholder="e.g., Tanzanian Craton"
+                        />
+                    </div>
+
+                    {/* Radius (for radius scan) */}
+                    {scanConfig.scanType === 'radius' && (
+                        <div>
+                            <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                                <Radio size={16} />
+                                Radius (km): {scanConfig.radiusKm}
+                            </label>
+                            <input
+                                type="range"
+                                min="0"
+                                max="200"
+                                step="5"
+                                value={scanConfig.radiusKm}
+                                onChange={(e) => setScanConfig(prev => ({
+                                    ...prev,
+                                    radiusKm: parseFloat(e.target.value)
+                                }))}
+                                className="w-full h-2 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+                            />
                         </div>
+                    )}
+
+                    {/* Grid Spacing (for grid scan) */}
+                    {scanConfig.scanType === 'grid' && (
+                        <div>
+                            <label className="block text-sm font-semibold mb-2">Grid Spacing (m)</label>
+                            <input
+                                type="number"
+                                min="10"
+                                max="1000"
+                                step="10"
+                                value={scanConfig.gridSpacingM}
+                                onChange={(e) => setScanConfig(prev => ({
+                                    ...prev,
+                                    gridSpacingM: parseFloat(e.target.value)
+                                }))}
+                                className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                            />
+                        </div>
+                    )}
+
+                    {/* Resolution */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Resolution</label>
+                        <select
+                            value={scanConfig.resolution}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                resolution: e.target.value as any
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        >
+                            <option value="native">Native (Pixel-by-Pixel)</option>
+                            <option value="high">High (10m)</option>
+                            <option value="medium">Medium (30m)</option>
+                            <option value="low">Low (100m)</option>
+                        </select>
+                    </div>
+
+                    {/* Sensor */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Satellite Sensor</label>
+                        <select
+                            value={scanConfig.sensor}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                sensor: e.target.value
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        >
+                            <option value="Sentinel-2">Sentinel-2 (10m, 5-day)</option>
+                            <option value="Landsat-8">Landsat-8 (30m, 16-day)</option>
+                        </select>
+                    </div>
+
+                    {/* Cloud Cover */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Max Cloud Cover (%)</label>
+                        <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="5"
+                            value={scanConfig.maxCloudCoverPercent}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                maxCloudCoverPercent: parseFloat(e.target.value)
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        />
+                    </div>
+
+                    {/* Date Start */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2 flex items-center gap-2">
+                            <Clock size={16} />
+                            Date Start (YYYY-MM-DD)
+                        </label>
+                        <input
+                            type="date"
+                            value={scanConfig.dateStart}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                dateStart: e.target.value
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        />
+                    </div>
+
+                    {/* Date End */}
+                    <div>
+                        <label className="block text-sm font-semibold mb-2">Date End (YYYY-MM-DD)</label>
+                        <input
+                            type="date"
+                            value={scanConfig.dateEnd}
+                            onChange={(e) => setScanConfig(prev => ({
+                                ...prev,
+                                dateEnd: e.target.value
+                            }))}
+                            className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-white"
+                        />
                     </div>
                 </div>
 
-                <div className="bg-slate-950 border border-slate-800 rounded-2xl flex flex-col overflow-hidden h-[400px] lg:h-auto shadow-2xl">
-                    <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between">
-                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center font-mono">
-                            <Terminal size={14} className="mr-2 text-emerald-400" /> Stack_Telemetry
-                        </h3>
-                        <div className={`w-2 h-2 rounded-full ${status.backend === 'OPERATIONAL' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></div>
+                {/* Mineral Selection */}
+                <div className="mb-8">
+                    <label className="block text-sm font-semibold mb-3">Minerals to Scan For</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                        {availableMinerals.map(mineral => (
+                            <button
+                                key={mineral}
+                                onClick={() => handleMineralToggle(mineral)}
+                                className={`px-4 py-2 rounded-lg font-semibold transition ${
+                                    selectedMinerals.has(mineral)
+                                        ? 'bg-purple-600 text-white border border-purple-400'
+                                        : 'bg-slate-900 text-slate-300 border border-slate-600 hover:border-slate-500'
+                                }`}
+                            >
+                                {mineral.toUpperCase()}
+                            </button>
+                        ))}
                     </div>
-                    <div className="flex-1 p-4 font-mono text-[10px] space-y-2 overflow-y-auto custom-scrollbar bg-black/40">
-                        {logs.length === 0 ? (
-                            <p className="text-slate-700 italic">Listening for system events...</p>
-                        ) : (
-                            logs.map((log, i) => (
-                                <div key={i} className="text-slate-400 flex gap-2 border-l border-slate-800 pl-2 group">
-                                    <span className="text-slate-600 shrink-0">{log.split('] ')[0]}]</span>
-                                    <span className={log.includes('Handshake') || log.includes('Latency') ? 'text-emerald-500' : ''}>
-                                        {log.split('] ')[1]}
-                                    </span>
+                    <p className="text-slate-400 text-sm mt-2">
+                        Selected: {selectedMinerals.size > 0 ? Array.from(selectedMinerals).join(', ').toUpperCase() : 'None'}
+                    </p>
+                </div>
+
+                {/* Start Scan Button */}
+                <button
+                    onClick={handleStartScan}
+                    disabled={isScanning || selectedMinerals.size === 0}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-lg flex items-center justify-center gap-3 transition text-lg"
+                >
+                    <Search size={24} />
+                    {isScanning ? 'SCANNING IN PROGRESS...' : 'START COMPREHENSIVE SCAN'}
+                </button>
+            </div>
+
+            {/* Scan History */}
+            {scanHistory.length > 0 && (
+                <div className="bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-8 border border-blue-500/20 mb-8">
+                    <h2 className="text-2xl font-bold flex items-center gap-3 mb-6">
+                        <BarChart3 className="text-blue-400" size={28} />
+                        Scan Repository
+                    </h2>
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {scanHistory.map((scan: any) => (
+                            <div key={scan.scan_id} className="bg-slate-900/50 rounded p-4 flex justify-between items-start">
+                                <div>
+                                    <p className="font-mono text-cyan-400">{scan.scan_id}</p>
+                                    <p className="text-sm text-slate-400 mt-1">{scan.location} • {scan.minerals?.join(', ')}</p>
+                                    <p className="text-xs text-slate-500 mt-1">{scan.created_at}</p>
                                 </div>
-                            ))
-                        )}
+                                <div className="text-right">
+                                    <p className={`text-sm font-bold ${
+                                        scan.status === 'completed' ? 'text-green-400' :
+                                        scan.status === 'running' ? 'text-yellow-400' :
+                                        'text-blue-400'
+                                    }`}>
+                                        {scan.status.toUpperCase()}
+                                    </p>
+                                    {scan.detections_found && (
+                                        <p className="text-xs text-slate-400 mt-1">{scan.detections_found} detections</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
+                </div>
+            )}
+
+            {/* Console Logs */}
+            <div className="bg-slate-900 rounded-lg p-8 border border-slate-700">
+                <h3 className="text-lg font-bold flex items-center gap-2 mb-4">
+                    <Terminal className="text-green-400" size={20} />
+                    Infrastructure_Logs
+                </h3>
+                <div className="bg-black rounded p-4 font-mono text-sm text-green-400 max-h-64 overflow-y-auto">
+                    {logs.length === 0 ? (
+                        <p className="text-slate-500">Ready for diagnostics...</p>
+                    ) : (
+                        logs.map((log, i) => <div key={i}>{log}</div>)
+                    )}
                 </div>
             </div>
         </div>
