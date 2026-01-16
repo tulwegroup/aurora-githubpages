@@ -29,6 +29,7 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onUpd
     const [isLive, setIsLive] = useState(false);
     const [isGeeReady, setIsGeeReady] = useState(false);
     const [isNeonReady, setIsNeonReady] = useState(false);
+    const [scanProgress, setScanProgress] = useState(65);
 
     const addLog = useCallback((msg: string) => {
         const time = new Date().toLocaleTimeString();
@@ -268,7 +269,45 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onUpd
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-aurora-950 border border-aurora-800 rounded-xl p-6 h-[500px] flex flex-col shadow-2xl relative overflow-hidden">
+                    {/* Kernel Telemetry Card */}
+                    <div className="bg-aurora-900/60 border border-aurora-800 rounded-lg p-4 backdrop-blur-sm hover:border-aurora-700 transition-colors">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-aurora-400 text-xs font-mono uppercase">Kernel Telemetry</p>
+                            <Activity size={14} className="text-emerald-400 animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm text-slate-400">Signal Strength</span>
+                                <span className="text-emerald-400 font-bold">{scanProgress}%</span>
+                            </div>
+                            <div className="w-full bg-aurora-950 rounded h-2">
+                                <div
+                                    className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-2 rounded transition-all"
+                                    style={{ width: `${scanProgress}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-xs text-aurora-500 mt-3 font-mono">Waiting for telemetry lock...</p>
+                        </div>
+                    </div>
+
+                    {/* Phase Status Card */}
+                    <div className="bg-aurora-900/60 border border-aurora-800 rounded-lg p-4 backdrop-blur-sm hover:border-aurora-700 transition-colors">
+                        <p className="text-aurora-400 text-xs font-mono uppercase mb-3">Current Phase</p>
+                        <p className="text-xl font-bold text-aurora-300 mb-2">{campaign.currentPhase || 'Acquisition'}</p>
+                        <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Phase {campaign.phaseIndex || 1}</span>
+                                <span className="text-aurora-400">Iteration {campaign.iteration || 1}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Accuracy</span>
+                                <span className="text-emerald-400">{((campaign.accuracyScore || 0.87) * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Cloud Telemetry Logs */}
+                    <div className="bg-aurora-950 border border-aurora-800 rounded-xl p-6 h-[280px] flex flex-col shadow-2xl relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500/50"></div>
                         <h3 className="font-bold text-slate-400 mb-4 flex items-center justify-between">
                             <span className="flex items-center"><Terminal size={14} className="mr-2 text-emerald-500" /> CLOUD TELEMETRY</span>
