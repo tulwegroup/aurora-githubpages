@@ -7,6 +7,7 @@ export interface SidebarProps {
   activeTab?: AppView;
   setActiveTab?: React.Dispatch<React.SetStateAction<AppView>>;
   customLogo?: string;
+  onSwitchCampaign?: (campaignId: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -14,7 +15,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   activeTab,
   setActiveTab,
-  customLogo
+  customLogo,
+  onSwitchCampaign
 }) => {
   return (
     <aside className="w-64 bg-aurora-950 border-r border-aurora-800 p-4 h-screen overflow-y-auto">

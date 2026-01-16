@@ -1,6 +1,7 @@
 import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
+import type { LeafletMouseEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
 interface MapVisualizationProps {
@@ -49,7 +50,9 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({
           <Marker
             key={idx}
             position={[anomaly.lat, anomaly.lon]}
-            onClick={() => onSelectAnomaly(anomaly)}
+            eventHandlers={{
+              click: () => onSelectAnomaly(anomaly)
+            }}
           >
             <Popup>{anomaly.name || `Anomaly ${idx}`}</Popup>
           </Marker>
