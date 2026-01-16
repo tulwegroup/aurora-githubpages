@@ -265,33 +265,28 @@ export class AuroraAPI {
     }
   }
 
-  static async generateFileContent(fileId: string): Promise<string> {
+  static async generateFileContent(fileName: string, fileType: string): Promise<string> {
     try {
-      return await this.apiFetch(`/data-lake/files/${fileId}/content`);
+      return await this.apiFetch(`/data-lake/files/${fileName}/content?type=${fileType}`);
     } catch(e) {
-      return `Content for file ${fileId}`;
+      return `Content for file ${fileName}`;
     }
   }
 
-  static async processFile(fileId: string): Promise<any> {
+  static async processFile(fileId: string, processType: string): Promise<any> {
     try {
-      return await this.apiFetch(`/data-lake/files/${fileId}/process`, { method: 'POST' });
+      return await this.apiFetch(`/data-lake/files/${fileId}/process`, { method: 'POST', body: JSON.stringify({ processType }) });
     } catch(e) {
-      return { status: 'processing', progress: 0 };
+      return { id: fileId, status: 'processing', progress: 0, processType };
     }
   }
 
   // Digital Twin View Methods
-  static async getDigitalTwinVoxels(region: string, depth?: { min: number, max: number }): Promise<any[]> {
+  static async getDigitalTwinVoxels(lat: number, lon: number): Promise<any> {
     try {
-      const params = new URLSearchParams({ region });
-      if (depth) {
-        params.append('depth_min', depth.min.toString());
-        params.append('depth_max', depth.max.toString());
-      }
-      return await this.apiFetch(`/twin/voxels?${params.toString()}`);
+      return await this.apiFetch(`/twin/voxels?lat=${lat}&lon=${lon}`);
     } catch(e) {
-      return [];
+      return { voxels: [] };
     }
   }
 
@@ -319,14 +314,14 @@ export class AuroraAPI {
   }
 
   // OSIL View Methods
-  static async getSatelliteSchedule(): Promise<any[]> {
+  static async getSatelliteSchedule(lat: number, lon: number): Promise<any> {
     try {
-      return await this.apiFetch('/osil/schedule');
+      return await this.apiFetch(`/osil/schedule?lat=${lat}&lon=${lon}`);
     } catch(e) {
-      return [
-        { id: 'TSK-9920', targetCoordinates: '8.12 S, 33.45 E', sensorType: 'SAR', priority: 'High', status: 'Scheduled', requestor: 'Ops', submittedAt: '2h ago' },
-        { id: 'TSK-9921', targetCoordinates: '8.12 S, 33.45 E', sensorType: 'SAR', priority: 'Urgent', status: 'Pending', requestor: 'Ops', submittedAt: '10m ago' }
-      ];
+      return { schedule: [
+        { id: 'TSK-9920', satellite: 'Sentinel-1', targetCoordinates: `${lat}, ${lon}`, sensorType: 'SAR', priority: 'High', status: 'Scheduled', requestor: 'Ops', submittedAt: '2h ago' },
+        { id: 'TSK-9921', satellite: 'Sentinel-2', targetCoordinates: `${lat}, ${lon}`, sensorType: 'Multispectral', priority: 'Urgent', status: 'Pending', requestor: 'Ops', submittedAt: '10m ago' }
+      ]};
     }
   }
 
@@ -339,19 +334,19 @@ export class AuroraAPI {
   }
 
   // PCFC View Methods
-  static async runPhysicsInversion(params: any): Promise<any> {
+  static async runPhysicsInversion(lat: number, lon: number, depth: number): Promise<any> {
     try {
-      return await this.apiFetch('/physics/invert', { method: 'POST', body: JSON.stringify(params) });
+      return await this.apiFetch('/physics/invert', { method: 'POST', body: JSON.stringify({ lat, lon, depth }) });
     } catch(e) {
-      return { jobId: `PHYS-${Date.now()}`, status: 'queued' };
+      return { jobId: `PHYS-${Date.now()}`, status: 'queued', residuals: [], structure: {} };
     }
   }
 
-  static async getPhysicsTomography(region: string): Promise<any> {
+  static async getPhysicsTomography(lat: number, lon: number): Promise<any> {
     try {
-      return await this.apiFetch(`/physics/tomography/${region}`);
+      return await this.apiFetch(`/physics/tomography/${lat}/${lon}`);
     } catch(e) {
-      return { depthSlices: [], residuals: [] };
+      return { slice: [], residuals: [], structure: {} };
     }
   }
 
@@ -371,26 +366,26 @@ export class AuroraAPI {
   }
 
   // QSE View Methods
-  static async runQuantumOptimization(params: any): Promise<any> {
+  static async runQuantumOptimization(lat: number, lon: number, depth: number): Promise<any> {
     try {
-      return await this.apiFetch('/quantum/optimize', { method: 'POST', body: JSON.stringify(params) });
+      return await this.apiFetch('/quantum/optimize', { method: 'POST', body: JSON.stringify({ lat, lon, depth }) });
     } catch(e) {
-      return { jobId: `QNT-${Date.now()}`, status: 'queued' };
+      return { jobId: `QNT-${Date.now()}`, status: 'queued', optimizationScore: 0.92 };
     }
   }
 
   // Seismic View Methods
-  static async getSeismicSlice(surveyId: string, axis: string, index: number): Promise<any> {
+  static async getSeismicSlice(lat: number, lon: number, index: number, axis: string): Promise<any> {
     try {
-      return await this.apiFetch(`/seismic/${surveyId}/${axis}/${index}`);
+      return await this.apiFetch(`/seismic/${lat}/${lon}/${axis}/${index}`);
     } catch(e) {
       return { width: 512, height: 512, data: Array(512).fill(Array(512).fill(0)), uncertainty: Array(512).fill(Array(512).fill(0)), horizons: [], faults: [] };
     }
   }
 
-  static async getStructuralTraps(surveyId: string): Promise<any[]> {
+  static async getStructuralTraps(lat: number, lon: number): Promise<any[]> {
     try {
-      return await this.apiFetch(`/seismic/${surveyId}/traps`);
+      return await this.apiFetch(`/seismic/${lat}/${lon}/traps`);
     } catch(e) {
       return [
         { id: 'trap-1', name: 'Anticlinal Closure', type: 'Structural', confidence: 0.87, volumetrics: 125, coordinates: { x: 250, y: 150, z: 2500 } },
@@ -399,18 +394,18 @@ export class AuroraAPI {
     }
   }
 
-  static async startSeismicJob(params: any): Promise<any> {
+  static async startSeismicJob(campaignId: string): Promise<any> {
     try {
-      return await this.apiFetch('/seismic/job', { method: 'POST', body: JSON.stringify(params) });
+      return await this.apiFetch('/seismic/job', { method: 'POST', body: JSON.stringify({ campaignId }) });
     } catch(e) {
-      return { jobId: `SEIS-${Date.now()}`, status: 'Ingesting', progress: 0 };
+      return { jobId: `SEIS-${Date.now()}`, status: 'Ingesting', progress: 0, currentTask: 'Initializing...' };
     }
   }
 
   // TMAL View Methods
-  static async getTemporalAnalysis(region: string): Promise<any> {
+  static async getTemporalAnalysis(lat: number, lon: number): Promise<any> {
     try {
-      return await this.apiFetch(`/temporal/${region}`);
+      return await this.apiFetch(`/temporal/${lat}/${lon}`);
     } catch(e) {
       return {
         timeSeries: [

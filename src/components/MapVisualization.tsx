@@ -13,6 +13,9 @@ interface MapVisualizationProps {
   isGEEActive?: boolean;
   showHistory?: boolean;
   campaign?: any;
+  historyData?: any[];
+  autoFit?: boolean;
+  scanRadius?: number;
 }
 
 // Fix for default markers
