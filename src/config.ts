@@ -9,7 +9,7 @@ export const APP_CONFIG = {
     
     API: {
         // Vercel/Vite environment variable with a hardcoded fallback for safety
-        BASE_URL: ENV.VITE_BACKEND_URL || 'http://localhost:8000',
+        BASE_URL: ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000',
         
         // Infrastructure Details
         DB_PROVIDER: 'Neon Serverless Postgres',

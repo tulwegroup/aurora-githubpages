@@ -65,6 +65,8 @@ class Settings:
         "http://localhost:5173",
         "https://aurora-osi-v4.up.railway.app",
         "https://aurora-osi-frontend.vercel.app",
+        "https://aurora-githubpages.vercel.app",
+        "https://aurora-githubpages-production.up.railway.app",
         os.getenv("FRONTEND_URL", "")
     ]
     CORS_CREDENTIALS: bool = True

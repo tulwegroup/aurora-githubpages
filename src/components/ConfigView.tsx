@@ -5,6 +5,8 @@ import {
     MapPin, Radio, Layers, Search, BarChart3, Clock
 } from 'lucide-react';
 import { AuroraAPI } from '../api';
+import { updateActiveCampaign, formatCoordinates } from '../constants';
+import ScanStatusMonitor from './ScanStatusMonitor';
 
 const ConfigView: React.FC = () => {
     const [isChecking, setIsChecking] = useState(false);
@@ -16,6 +18,7 @@ const ConfigView: React.FC = () => {
         latency: '0ms'
     });
     const [logs, setLogs] = useState<string[]>([]);
+    const [activeScanId, setActiveScanId] = useState<string | null>(null);
 
     // Scan Configuration State
     const [scanConfig, setScanConfig] = useState({
@@ -144,7 +147,22 @@ const ConfigView: React.FC = () => {
 
             if (response.ok) {
                 const result = await response.json();
-                addLog(`✓ Scan ${result.scan_id} queued - processing in background`);
+                const scanId = result.scan_id;
+                
+                // Update active campaign with new scan parameters
+                updateActiveCampaign(
+                    parseFloat(scanConfig.latitude as any),
+                    parseFloat(scanConfig.longitude as any),
+                    Array.from(selectedMinerals),
+                    scanConfig.country || undefined,
+                    scanConfig.region || undefined
+                );
+                
+                // Set active scan for monitoring
+                setActiveScanId(scanId);
+                
+                addLog(`✓ Scan ${scanId} queued - processing in background`);
+                addLog(`📍 Target: ${formatCoordinates(parseFloat(scanConfig.latitude as any), parseFloat(scanConfig.longitude as any))}`);
                 
                 // Reload history
                 await loadScanHistory();
@@ -181,8 +199,13 @@ const ConfigView: React.FC = () => {
                     <Server className="text-cyan-400" size={40} />
                     Infrastructure & Mission Configuration
                 </h1>
-                <p className="text-slate-400">Query planetary data... Tanzania / Mozambique Belt</p>
+                <p className="text-slate-400">Dynamic target region based on scan coordinates</p>
             </div>
+
+            {/* Active Scan Monitor */}
+            {activeScanId && (
+                <ScanStatusMonitor scanId={activeScanId} isVisible={!!activeScanId} />
+            )}
 
             {/* Sync Diagnostics Card */}
             <div className="mb-8 bg-gradient-to-r from-slate-800 to-slate-700 rounded-lg p-8 border border-cyan-500/20">

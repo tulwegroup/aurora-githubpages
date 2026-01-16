@@ -9,7 +9,37 @@ export const GLOBAL_MINERAL_PROVINCES = [
     { name: 'Bushveld Complex', type: ['PGM', 'Chrome'], bounds: [-26, 26, -24, 31], desc: 'Largest layered igneous intrusion.' }
 ];
 
-export const ACTIVE_CAMPAIGN: ExplorationCampaign = {
+// Helper function to generate mission ID from timestamp
+export const generateMissionId = (): string => {
+  return `CMP-${Date.now()}`;
+};
+
+// Helper function to format coordinates
+export const formatCoordinates = (lat: number, lon: number): string => {
+  const latStr = `${Math.abs(lat).toFixed(2)}° ${lat < 0 ? 'S' : 'N'}`;
+  const lonStr = `${Math.abs(lon).toFixed(2)}° ${lon < 0 ? 'W' : 'E'}`;
+  return `${latStr}, ${lonStr}`;
+};
+
+// Helper function to determine region name from coordinates
+export const determineRegionName = (lat: number, lon: number): string => {
+  // Tanzania/Mozambique Belt
+  if (lat >= -12 && lat <= -5 && lon >= -36 && lon <= -30) {
+    return 'Tanzania / Mozambique Belt';
+  }
+  // Saudi Arabia region
+  if (lat >= 20 && lat <= 28 && lon >= 35 && lon <= 45) {
+    return 'Arabian Shield';
+  }
+  // Nevada region
+  if (lat >= 37 && lat <= 40 && lon >= -119 && lon <= -115) {
+    return 'Great Basin';
+  }
+  // Default
+  return `Region (${formatCoordinates(lat, lon)})`;
+};
+
+export const DEFAULT_CAMPAIGN: ExplorationCampaign = {
   id: 'CMP-2023-9981',
   name: 'Project Rift Valley: Strategic Gas & Critical Minerals',
   targetCoordinates: '8.12° S, 33.45° E',
@@ -50,6 +80,30 @@ export const ACTIVE_CAMPAIGN: ExplorationCampaign = {
   status: 'Active',
   iteration: 1,
   priorsLoaded: true
+};
+
+// Active campaign starts as default but can be updated dynamically
+export let ACTIVE_CAMPAIGN: ExplorationCampaign = { ...DEFAULT_CAMPAIGN };
+
+// Function to update active campaign based on scan parameters
+export const updateActiveCampaign = (latitude: number, longitude: number, minerals: string[], country?: string, region?: string): void => {
+  const missionId = generateMissionId();
+  const regionName = region || determineRegionName(latitude, longitude);
+  const coordinates = formatCoordinates(latitude, longitude);
+  
+  ACTIVE_CAMPAIGN = {
+    ...DEFAULT_CAMPAIGN,
+    id: missionId,
+    targetCoordinates: coordinates,
+    regionName: regionName,
+    targetElement: minerals.join(', ').toUpperCase(),
+    name: `Scan ${missionId}: ${regionName}`,
+    startDate: new Date().toISOString().split('T')[0],
+    currentPhase: CAMPAIGN_PHASES[0],
+    phaseIndex: 0,
+    phaseProgress: 0,
+    status: 'Active'
+  };
 };
 
 export const RESOURCE_CATALOG = [

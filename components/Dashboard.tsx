@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ExplorationCampaign, AppView, CAMPAIGN_PHASES, Anomaly, Satellite, TargetResult, ScanSector, MineralAgentType, HiveMindState } from '../types';
-import { RESOURCE_CATALOG, ANOMALIES } from '../constants';
+import { RESOURCE_CATALOG, ANOMALIES, ACTIVE_CAMPAIGN } from '../constants';
 import MapVisualization from './MapVisualization';
-import { Play, Upload, Plus, Target, Activity, Zap, Search, ChevronRight, AlertTriangle, CheckCircle, MapPin, Database, Radar, Globe, Crosshair, Loader2, FileText, Terminal, Bot, LayoutGrid, Users, Maximize, StopCircle, Cpu, Pause, Wifi, Lock, ShieldCheck, Server } from 'lucide-react';
+import { Play, Upload, Plus, Target, Activity, Zap, Search, ChevronRight, AlertTriangle, CheckCircle, MapPin, Database, Radar, Globe, Crosshair, Loader2, FileText, Terminal, Bot, LayoutGrid, Users, Maximize, StopCircle, Cpu, Pause, Wifi, Lock, ShieldCheck, Server, X } from 'lucide-react';
 import { AuroraAPI } from '../api';
 
 interface DashboardProps {
@@ -27,7 +27,34 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onAdv
     });
     const [isLaunching, setIsLaunching] = useState(false);
     const [telemetryLogs, setTelemetryLogs] = useState<string[]>([]);
+    const [scanState, setScanState] = useState<{id: string; config: any; progress: number; status: 'running' | 'paused' | 'completed'} | null>(null);
+    const [showScanConfig, setShowScanConfig] = useState(false);
+    // Use ACTIVE_CAMPAIGN for display if it's been updated, otherwise use props campaign
+    const displayCampaign = ACTIVE_CAMPAIGN && ACTIVE_CAMPAIGN.id !== campaign.id ? ACTIVE_CAMPAIGN : campaign;
     const logsEndRef = useRef<HTMLDivElement>(null);
+    
+    // Load scan state from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('aurora_scan_state');
+        if (saved) {
+            try {
+                const state = JSON.parse(saved);
+                setScanState(state);
+                if (state.status !== 'completed') {
+                    setShowScanConfig(true);
+                }
+            } catch (e) {
+                console.log('No saved scan state');
+            }
+        }
+    }, []);
+    
+    // Save scan state to localStorage whenever it changes
+    useEffect(() => {
+        if (scanState) {
+            localStorage.setItem('aurora_scan_state', JSON.stringify(scanState));
+        }
+    }, [scanState]);
     const [systemOnline, setSystemOnline] = useState(false);
 
     const addLog = useCallback((msg: string) => {
@@ -51,23 +78,29 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onAdv
             interval = setInterval(async () => {
                 try {
                     const status = await AuroraAPI.getMissionStatus(campaign.jobId!);
-                    onUpdateCampaign({
-                        ...campaign,
-                        phaseProgress: status.progress,
-                        status: status.status === 'COMPLETED' ? 'Completed' : 'Active',
-                        results: status.results ? status.results.results : campaign.results
-                    });
-                    
-                    if (status.status === 'COMPLETED') {
-                        addLog("MISSION COMPLETE: Spectral analysis confirmed.");
-                        clearInterval(interval);
+                    // Only update if we got a valid response
+                    if (status && status.progress !== undefined) {
+                        onUpdateCampaign({
+                            ...campaign,
+                            phaseProgress: status.progress || 0,
+                            status: status.status === 'COMPLETED' ? 'Completed' : 'Active',
+                            results: status.results ? status.results.results : campaign.results
+                        });
+                        
+                        if (status.status === 'COMPLETED') {
+                            addLog("MISSION COMPLETE: Spectral analysis confirmed.");
+                            clearInterval(interval);
+                        }
                     }
                 } catch (e) {
                     console.error("Polling failed", e);
+                    // Silently continue polling - system is in Sovereign mode
                 }
             }, 5000);
         }
-        return () => clearInterval(interval);
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, [campaign, onUpdateCampaign, addLog]);
 
     const handleLaunch = async () => {
@@ -78,6 +111,14 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onAdv
 
         setIsLaunching(true);
         addLog("Initializing GEE Data Acquisition...");
+        
+        const scanId = `scan-${Date.now()}`;
+        setScanState({
+            id: scanId,
+            config: missionConfig,
+            progress: 0,
+            status: 'running'
+        });
         
         try {
             const missionId = `mission-${Date.now()}`;
@@ -105,6 +146,7 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onAdv
             
             onLaunchCampaign(newCampaign);
             setShowMissionPlanner(false);
+            setShowScanConfig(true);
             addLog("Mission parameters locked. Processing multi-physics stack...");
         } catch (error) {
             addLog("NOTICE: Running in Autonomous Sovereign Mode.");
@@ -120,6 +162,7 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onAdv
             };
             onLaunchCampaign(newCampaign);
             setShowMissionPlanner(false);
+            setShowScanConfig(true);
         } finally {
             setIsLaunching(false);
         }
@@ -197,7 +240,97 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onAdv
                         />
                     </div>
 
-                    {showMissionPlanner && (
+                    {showScanConfig && scanState && (
+                        <div className="bg-slate-900 border border-slate-700 rounded-xl p-6 shadow-2xl animate-fadeIn">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-lg font-bold text-white flex items-center">
+                                        <Radar className="mr-3 text-aurora-500 animate-spin-slow" size={20} />
+                                        Active Scan Configuration
+                                    </h3>
+                                    <p className="text-xs text-slate-400 font-mono mt-1">ID: {scanState.id}</p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        localStorage.removeItem('aurora_scan_state');
+                                        setScanState(null);
+                                        setShowScanConfig(false);
+                                    }}
+                                    className="text-slate-500 hover:text-white transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+                                    <p className="text-[10px] text-slate-500 uppercase font-mono mb-1">Coordinates</p>
+                                    <p className="text-sm font-mono text-white">{scanState.config.coordinates || 'Auto'}</p>
+                                </div>
+                                <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+                                    <p className="text-[10px] text-slate-500 uppercase font-mono mb-1">Radius</p>
+                                    <p className="text-sm font-mono text-white">{scanState.config.radius}km</p>
+                                </div>
+                                <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+                                    <p className="text-[10px] text-slate-500 uppercase font-mono mb-1">Progress</p>
+                                    <p className="text-sm font-mono text-emerald-400">{scanState.progress}%</p>
+                                </div>
+                                <div className="bg-slate-950 border border-slate-800 p-4 rounded-lg">
+                                    <p className="text-[10px] text-slate-500 uppercase font-mono mb-1">Status</p>
+                                    <span className={`text-sm font-mono px-2 py-1 rounded ${
+                                        scanState.status === 'running' ? 'text-emerald-400' :
+                                        scanState.status === 'paused' ? 'text-amber-400' :
+                                        'text-blue-400'
+                                    }`}>
+                                        {scanState.status.toUpperCase()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <p className="text-[10px] text-slate-500 uppercase font-mono mb-2">Selected Minerals</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {scanState.config.selectedResources.map((r: string) => (
+                                        <span key={r} className="bg-aurora-500/20 border border-aurora-500 text-aurora-300 px-3 py-1 rounded-full text-xs font-mono">
+                                            {r}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex gap-3">
+                                <button 
+                                    onClick={() => setScanState({...scanState, progress: Math.min(scanState.progress + 10, 100), status: scanState.status === 'paused' ? 'running' : 'running'})}
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center"
+                                >
+                                    {scanState.status === 'paused' ? <Play size={16} className="mr-2" /> : <Activity size={16} className="mr-2" />}
+                                    {scanState.status === 'paused' ? 'RESUME' : 'CONTINUE'}
+                                </button>
+                                <button 
+                                    onClick={() => setScanState({...scanState, status: scanState.status === 'running' ? 'paused' : 'running'})}
+                                    className="flex-1 bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center"
+                                >
+                                    <Pause size={16} className="mr-2" />
+                                    {scanState.status === 'running' ? 'PAUSE' : 'PAUSED'}
+                                </button>
+                                <button 
+                                    onClick={() => setScanState({...scanState, progress: 100, status: 'completed'})}
+                                    className="flex-1 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center"
+                                >
+                                    <CheckCircle size={16} className="mr-2" />
+                                    COMPLETE
+                                </button>
+                            </div>
+
+                            <div className="mt-4 bg-slate-950 border border-slate-800 rounded-lg p-4">
+                                <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                                    <div className="bg-gradient-to-r from-aurora-500 to-emerald-500 h-full transition-all" style={{ width: `${scanState.progress}%` }}></div>
+                                </div>
+                                <p className="text-[10px] text-slate-400 mt-2 font-mono">Scan Progress: {scanState.progress}% complete</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
                         <div className="bg-aurora-900 border border-aurora-500 rounded-xl p-6 animate-fadeIn shadow-2xl z-20 relative">
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className="text-xl font-bold text-white flex items-center">

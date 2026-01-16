@@ -8,6 +8,16 @@ import { AuroraAPI } from '../api';
 const ConfigView: React.FC = () => {
     const [manualUrl, setManualUrl] = useState(AuroraAPI.getActiveEndpoint());
     const [activeSection, setActiveSection] = useState<'status' | 'recovery'>('status');
+    const [isSaved, setIsSaved] = useState(false);
+    
+    // Sync URL from localStorage on mount
+    useEffect(() => {
+        const saved = localStorage.getItem('aurora_live_backend_url');
+        if (saved) {
+            setManualUrl(saved);
+        }
+    }, []);
+    
     const [status, setStatus] = useState({
         backend: 'UNKNOWN',
         database: 'UNKNOWN',
@@ -53,7 +63,10 @@ const ConfigView: React.FC = () => {
 
     const handleUrlUpdate = () => {
         AuroraAPI.setBackendUrl(manualUrl);
+        setIsSaved(true);
+        addLog(`✓ System: Backend URL saved to local storage`);
         addLog(`System: Uplink redirected to ${manualUrl}`);
+        setTimeout(() => setIsSaved(false), 3000);
         runDiagnostics();
     };
 
@@ -106,9 +119,17 @@ const ConfigView: React.FC = () => {
                             />
                             <button 
                                 onClick={handleUrlUpdate}
-                                className="bg-aurora-600 hover:bg-aurora-500 text-white px-8 py-3 rounded-xl text-sm font-bold flex items-center justify-center transition-all shadow-lg active:scale-95"
+                                className={`px-8 py-3 rounded-xl text-sm font-bold flex items-center justify-center transition-all shadow-lg active:scale-95 ${isSaved ? 'bg-emerald-600 text-white' : 'bg-aurora-600 hover:bg-aurora-500 text-white'}`}
                             >
-                                <Save size={18} className="mr-2" /> RE-SYNC
+                                {isSaved ? (
+                                    <>
+                                        <Check size={18} className="mr-2" /> SAVED
+                                    </>
+                                ) : (
+                                    <>
+                                        <Save size={18} className="mr-2" /> RE-SYNC
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
