@@ -1,0 +1,7 @@
+backend/
+requirements.txt
+docker-compose.yml
+Dockerfile
+backend.Dockerfile
+.github/
+db/
