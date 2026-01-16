@@ -45,6 +45,11 @@ jobs:
           working-directory: ./
           alias: aurora-osi.vercel.app
 
+      - name: Trigger Vercel Deploy Hook (Backup)
+        run: |
+          curl -X POST https://api.vercel.com/v1/integrations/deploy/prj_QuP7C1AOiojOBETWDu8xwrHXVfwZ/T4xH2iH9ZV
+        continue-on-error: true
+
   # Backend Deployment to Railway
   deploy-backend:
     name: Deploy Backend to Railway
