@@ -115,7 +115,14 @@ const App: React.FC = () => {
 
   const handleLaunch = async (c: ExplorationCampaign) => { setCampaign(c); await AuroraAPI.updateCampaign(c); };
   const handleUpdate = async (c: ExplorationCampaign) => { setCampaign(c); await AuroraAPI.updateCampaign(c); };
-  const handleSwitch = async (c: ExplorationCampaign) => { setCampaign(c); await AuroraAPI.updateCampaign(c); setActiveTab('dashboard'); };
+  const handleSwitch = async (campaignId: string) => {
+    const selectedCampaign = campaigns.find((c) => c.id === campaignId);
+    if (selectedCampaign) {
+      setCampaign(selectedCampaign);
+      await AuroraAPI.updateCampaign(selectedCampaign);
+      setActiveTab('dashboard');
+    }
+  };
 
   const renderContent = () => {
     let ViewComponent: any;
