@@ -123,12 +123,19 @@ const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onUpd
         }
     };
 
-    const groupedMinerals = RESOURCE_CATALOG.reduce((acc, curr: any) => {
-        const group = curr.group || 'Other';
-        if (!acc[group]) acc[group] = [];
-        acc[group].push(curr);
-        return acc;
-    }, {} as Record<string, any[]>);
+    const groupedMinerals = React.useMemo(() => {
+        try {
+            return RESOURCE_CATALOG.reduce((acc, curr: any) => {
+                const group = curr.group || 'Other';
+                if (!acc[group]) acc[group] = [];
+                acc[group].push(curr);
+                return acc;
+            }, {} as Record<string, any[]>);
+        } catch (err) {
+            console.error('Error grouping minerals:', err);
+            return {} as Record<string, any[]>;
+        }
+    }, []);
 
     return (
         <div className="space-y-6 pb-20 animate-fadeIn">
