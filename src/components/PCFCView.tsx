@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+﻿// Deployment trigger: 2026-01-17
+import React, { useState, useEffect, useRef } from 'react';
 import { CAUSAL_NODES, SEEPAGE_NETWORK } from '../constants';
 import { CausalNode, ExplorationCampaign } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
