@@ -30,5 +30,11 @@ EXPOSE 3000 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Start both backend and frontend
-CMD sh -c 'python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &' && node server.js
+# Create startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &' >> /app/start.sh && \
+    echo 'node server.js' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Start both services
+CMD ["/bin/sh", "/app/start.sh"]

@@ -106,15 +106,29 @@ export class AuroraAPI {
     const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const fullUrl = `${url}${cleanPath}`;
 
-    const res = await fetch(fullUrl, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const res = await fetch(fullUrl, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        }
+      });
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) {
+        console.warn(`API ${res.status} for ${cleanPath}`);
+        throw new Error(`API Error: ${res.status}`);
       }
-    });
-    if (!res.ok) throw new Error(`API Error: ${res.status}`);
-    return res.json();
+      return res.json();
+    } catch (err: any) {
+      console.warn(`API fetch failed for ${cleanPath}: ${err.message}`);
+      throw err;
+    }
   }
 
   static async launchRealMission(payload: any): Promise<any> {
