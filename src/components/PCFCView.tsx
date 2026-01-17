@@ -1,4 +1,5 @@
-﻿// Cloudflare deployment: 2026-01-17 19:45
+﻿// GitHub Pages deployment: 2026-01-17 19:50
+// Cloudflare deployment: 2026-01-17 19:45
 // Deployment trigger: 2026-01-17
 import React, { useState, useEffect, useRef } from 'react';
 import { CAUSAL_NODES, SEEPAGE_NETWORK } from '../constants';
