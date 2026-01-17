@@ -107,60 +107,54 @@ export const updateActiveCampaign = (latitude: number, longitude: number, minera
 };
 
 export const RESOURCE_CATALOG = [
-  // GOLD SYSTEM
-  { category: 'Arsenopyrite', group: 'Gold', default: 'Au', primaryMethod: 'SWIR 0.55µm', maxDepth: '900m' },
-  { category: 'Pyrite', group: 'Gold', default: 'Au', primaryMethod: 'VNIR 0.89µm', maxDepth: '1.2km' },
-  { category: 'Scorodite', group: 'Gold', default: 'As/Au', primaryMethod: 'VNIR 0.45µm', maxDepth: '50m' },
-  
-  // COPPER SYSTEM
-  { category: 'Chalcopyrite', group: 'Copper', default: 'Cu', primaryMethod: 'VNIR 0.57µm', maxDepth: '2.5km' },
-  { category: 'Bornite', group: 'Copper', default: 'Cu', primaryMethod: 'SWIR 1.15µm', maxDepth: '1.5km' },
-  { category: 'Chalcocite', group: 'Copper', default: 'Cu', primaryMethod: 'SWIR 1.45µm', maxDepth: '1.2km' },
-  { category: 'Covellite', group: 'Copper', default: 'Cu', primaryMethod: 'SWIR 1.35µm', maxDepth: '1.0km' },
-  { category: 'Malachite', group: 'Copper', default: 'Cu', primaryMethod: 'SWIR 2.25µm', maxDepth: '50m' },
-  { category: 'Azurite', group: 'Copper', default: 'Cu', primaryMethod: 'SWIR 2.50µm', maxDepth: '50m' },
+  // PRECIOUS METALS (3)
+  { category: 'Gold', group: 'Precious Metals', default: 'Au', primaryMethod: 'SWIR 0.55µm', maxDepth: '900m' },
+  { category: 'Silver', group: 'Precious Metals', default: 'Ag', primaryMethod: 'SWIR 0.70µm', maxDepth: '800m' },
+  { category: 'Platinum', group: 'Precious Metals', default: 'Pt', primaryMethod: 'SWIR 1.80µm', maxDepth: '1.5km' },
 
-  // LITHIUM SYSTEM
-  { category: 'Spodumene', group: 'Lithium', default: 'Li', primaryMethod: 'SWIR 2.35µm', maxDepth: '1km' },
-  { category: 'Lepidolite', group: 'Lithium', default: 'Li', primaryMethod: 'SWIR 2.20µm', maxDepth: '500m' },
-  { category: 'Petalite', group: 'Lithium', default: 'Li', primaryMethod: 'SWIR 2.40µm', maxDepth: '800m' },
-  { category: 'Amblygonite', group: 'Lithium', default: 'Li', primaryMethod: 'SWIR 2.45µm', maxDepth: '600m' },
+  // BASE METALS (6)
+  { category: 'Copper', group: 'Base Metals', default: 'Cu', primaryMethod: 'VNIR 0.57µm', maxDepth: '2.5km' },
+  { category: 'Molybdenum', group: 'Base Metals', default: 'Mo', primaryMethod: 'VNIR 0.70µm', maxDepth: '3km' },
+  { category: 'Zinc', group: 'Base Metals', default: 'Zn', primaryMethod: 'SWIR 1.75µm', maxDepth: '1.2km' },
+  { category: 'Lead', group: 'Base Metals', default: 'Pb', primaryMethod: 'VNIR 0.65µm', maxDepth: '1.5km' },
+  { category: 'Nickel', group: 'Base Metals', default: 'Ni', primaryMethod: 'VNIR 0.95µm', maxDepth: '2km' },
+  { category: 'Cobalt', group: 'Base Metals', default: 'Co', primaryMethod: 'SWIR 1.50µm', maxDepth: '1km' },
 
-  // ZINC / LEAD
-  { category: 'Sphalerite', group: 'Zinc', default: 'Zn', primaryMethod: 'SWIR 1.75µm', maxDepth: '1.2km' },
-  { category: 'Galena', group: 'Lead', default: 'Pb', primaryMethod: 'VNIR 0.65µm', maxDepth: '1.5km' },
-  { category: 'Smithsonite', group: 'Zinc', default: 'Zn', primaryMethod: 'SWIR 2.30µm', maxDepth: '200m' },
-  { category: 'Hemimorphite', group: 'Zinc', default: 'Zn', primaryMethod: 'SWIR 1.90µm', maxDepth: '300m' },
-  { category: 'Hydrozincite', group: 'Zinc', default: 'Zn', primaryMethod: 'SWIR 2.35µm', maxDepth: '150m' },
+  // BATTERY & ENERGY METALS (2)
+  { category: 'Lithium', group: 'Battery & Energy', default: 'Li', primaryMethod: 'SWIR 2.35µm', maxDepth: '1km' },
+  { category: 'Rare Earth Elements', group: 'Battery & Energy', default: 'REE', primaryMethod: 'SWIR 2.20µm', maxDepth: '200m' },
 
-  // NICKEL / COBALT
-  { category: 'Pentlandite', group: 'Nickel', default: 'Ni', primaryMethod: 'VNIR 0.95µm', maxDepth: '2km' },
-  { category: 'Garnierite', group: 'Nickel', default: 'Ni', primaryMethod: 'SWIR 2.20µm', maxDepth: '400m' },
-  { category: 'Violarite', group: 'Nickel', default: 'Ni', primaryMethod: 'VNIR 1.00µm', maxDepth: '600m' },
-  { category: 'Cobaltite', group: 'Cobalt', default: 'Co', primaryMethod: 'SWIR 1.50µm', maxDepth: '1km' },
+  // DEEP-SEA MINERALS (3)
+  { category: 'Cobalt Crust', group: 'Deep-Sea', default: 'Co-Mn', primaryMethod: 'Ocean Color 443nm', maxDepth: '1000m' },
+  { category: 'Polymetallic Nodules', group: 'Deep-Sea', default: 'Mn-Fe-Ni', primaryMethod: 'Bathymetry 400nm', maxDepth: '5000m' },
+  { category: 'Hydrothermal Sulfides', group: 'Deep-Sea', default: 'ZnS-CuFeS', primaryMethod: 'SAR Backscatter', maxDepth: '3000m' },
 
-  // STRATEGIC / REE
-  { category: 'Bastnäsite', group: 'REE', default: 'Ce', primaryMethod: 'SWIR 2.00µm', maxDepth: '150m' },
-  { category: 'Monazite', group: 'REE', default: 'Ce', primaryMethod: 'SWIR 2.20µm', maxDepth: '200m' },
-  { category: 'Xenotime', group: 'REE', default: 'Y', primaryMethod: 'SWIR 2.30µm', maxDepth: '250m' },
+  // INDUSTRIAL MINERALS (5)
+  { category: 'Potash', group: 'Industrial', default: 'K', primaryMethod: 'TIR 8.70µm', maxDepth: '1km' },
+  { category: 'Phosphate', group: 'Industrial', default: 'P', primaryMethod: 'SWIR 1.90µm', maxDepth: '500m' },
+  { category: 'Sulfur', group: 'Industrial', default: 'S', primaryMethod: 'SWIR 2.10µm', maxDepth: '800m' },
+  { category: 'Barite', group: 'Industrial', default: 'Ba', primaryMethod: 'SWIR 2.55µm', maxDepth: '600m' },
+  { category: 'Fluorspar', group: 'Industrial', default: 'F', primaryMethod: 'SWIR 2.20µm', maxDepth: '900m' },
 
-  // IRON SYSTEM
-  { category: 'Hematite', group: 'Iron', default: 'Fe', primaryMethod: 'VNIR 0.86µm', maxDepth: '500m' },
-  { category: 'Magnetite', group: 'Iron', default: 'Fe', primaryMethod: 'VNIR 1.15µm', maxDepth: '1km' },
-  { category: 'Goethite', group: 'Iron', default: 'Fe', primaryMethod: 'VNIR 0.92µm', maxDepth: '400m' },
+  // BULK COMMODITIES (3)
+  { category: 'Iron Ore', group: 'Bulk', default: 'Fe', primaryMethod: 'VNIR 0.86µm', maxDepth: '500m' },
+  { category: 'Manganese', group: 'Bulk', default: 'Mn', primaryMethod: 'VNIR 1.10µm', maxDepth: '600m' },
+  { category: 'Aluminum', group: 'Bulk', default: 'Al', primaryMethod: 'SWIR 2.20µm', maxDepth: '400m' },
 
-  // ALTERATION / PATHFINDERS
-  { category: 'Kaolinite', group: 'Alteration', default: 'Al-OH', primaryMethod: 'SWIR 2.21µm', maxDepth: '100m' },
-  { category: 'Alunite', group: 'Alteration', default: 'K-Al', primaryMethod: 'SWIR 1.76µm', maxDepth: '200m' },
-  { category: 'Jarosite', group: 'Alteration', default: 'Fe-OH', primaryMethod: 'VNIR 0.43µm', maxDepth: '150m' },
-  { category: 'Muscovite', group: 'Alteration', default: 'K-mica', primaryMethod: 'SWIR 2.20µm', maxDepth: '1km' },
-  { category: 'Chlorite', group: 'Alteration', default: 'Mg-Fe', primaryMethod: 'SWIR 2.25µm', maxDepth: '1.5km' },
-  { category: 'Epidote', group: 'Alteration', default: 'Ca-Al', primaryMethod: 'SWIR 2.34µm', maxDepth: '1.2km' },
+  // HYDROCARBONS (3)
+  { category: 'Crude Oil', group: 'Hydrocarbons', default: 'HC', primaryMethod: 'SAR Slick Detection', maxDepth: '3000m' },
+  { category: 'Natural Gas', group: 'Hydrocarbons', default: 'CH4', primaryMethod: 'SWIR 1.40µm', maxDepth: '4000m' },
+  { category: 'Coal', group: 'Hydrocarbons', default: 'C', primaryMethod: 'VNIR 0.55µm', maxDepth: '2km' },
 
-  // ADDITIONAL STRATEGIC
-  { category: 'Scheelite', group: 'Strategic', default: 'W', primaryMethod: 'SWIR 1.95µm', maxDepth: '800m' },
-  { category: 'Wolframite', group: 'Strategic', default: 'W', primaryMethod: 'VNIR 0.65µm', maxDepth: '900m' },
-  { category: 'Molybdenite', group: 'Strategic', default: 'Mo', primaryMethod: 'VNIR 0.70µm', maxDepth: '3km' }
+  // GEOTHERMAL & RENEWABLE (2)
+  { category: 'Geothermal Hot Spring', group: 'Geothermal', default: 'GEO-HS', primaryMethod: 'TIR 8.50µm', maxDepth: '1km' },
+  { category: 'Geothermal Deep', group: 'Geothermal', default: 'GEO-D', primaryMethod: 'TIR 11.00µm', maxDepth: '3km' },
+
+  // WATER RESOURCES (1)
+  { category: 'Groundwater Aquifer', group: 'Water', default: 'GW', primaryMethod: 'NDVI + Gravity', maxDepth: '500m' },
+
+  // AGGREGATES (1)
+  { category: 'Aggregate', group: 'Aggregates', default: 'AGG', primaryMethod: 'VNIR 0.55µm', maxDepth: '300m' }
 ];
 
 export const SATELLITES: Satellite[] = [

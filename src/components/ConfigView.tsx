@@ -44,7 +44,26 @@ const ConfigView: React.FC = () => {
     );
 
     const availableMinerals = [
-        'gold', 'lithium', 'copper', 'iron', 'cobalt', 'nickel', 'tin', 'rare_earth', 'hydrocarbon'
+        // Precious Metals (3)
+        'gold', 'silver', 'platinum',
+        // Base Metals (6)
+        'copper', 'molybdenum', 'zinc', 'lead', 'nickel', 'cobalt',
+        // Battery & Energy Metals (2)
+        'lithium', 'rare_earth_elements',
+        // Deep-Sea Minerals (3)
+        'cobalt_crust', 'polymetallic_nodules', 'hydrothermal_sulfides',
+        // Industrial Minerals (5)
+        'potash', 'phosphate', 'sulfur', 'barite', 'fluorspar',
+        // Bulk Commodities (3)
+        'iron_ore', 'manganese', 'aluminum',
+        // Hydrocarbons (3)
+        'crude_oil', 'natural_gas', 'coal',
+        // Geothermal & Renewable (2)
+        'geothermal_hot_spring', 'geothermal_deep',
+        // Water Resources (1)
+        'groundwater_aquifer',
+        // Aggregates (1)
+        'aggregate'
     ];
 
     const addLog = useCallback((msg: string) => {
