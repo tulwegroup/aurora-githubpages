@@ -1,8 +1,9 @@
 [build]
 builder = "dockerfile"
+dockerfile = "backend.Dockerfile"
 
 [deploy]
-healthcheckPath = "/system/health"
+healthcheckPath = "/health"
 healthcheckTimeout = 60
 healthcheckInterval = 5
 startCommand = ""
@@ -16,14 +17,11 @@ PORT = "8000"
 name = "backend"
 builder = "dockerfile"
 dockerfile = "backend.Dockerfile"
-startCommand = ""
+port = 8000
 
 [[services]]
 name = "frontend"
 builder = "dockerfile"
 dockerfile = "frontend.Dockerfile"
 port = 3000
-
-[[services.domains]]
-name = "aurora-frontend"
 
