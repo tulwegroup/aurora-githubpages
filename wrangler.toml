@@ -1,5 +1,4 @@
 name = "aurora-githubpages"
-main = "src/worker.ts"
 compatibility_date = "2026-01-17"
 
 [site]
