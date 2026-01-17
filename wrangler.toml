@@ -1,0 +1,19 @@
+name = "aurora-osi-v3"
+main = "src/worker.ts"
+compatibility_date = "2026-01-17"
+
+[env.production]
+name = "aurora-osi-v3"
+
+[build]
+command = "npm run build"
+
+[site]
+bucket = "./dist"
+
+[triggers.crons]
+# Optional: add cron jobs if needed
+
+[[routes]]
+pattern = "*"
+zone_name = "example.com"

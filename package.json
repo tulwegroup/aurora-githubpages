@@ -36,7 +36,9 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "tailwindcss": "^3.3.0",
     "postcss": "^8.4.31",
-    "autoprefixer": "^10.4.16"
+    "autoprefixer": "^10.4.16",
+    "@cloudflare/kv-asset-handler": "^0.3.0",
+    "wrangler": "^3.0.0"
   },
   "engines": {
     "node": ">=18.0.0",
