@@ -18,7 +18,9 @@
     "leaflet": "^1.9.4",
     "recharts": "^2.10.3",
     "axios": "^1.6.2",
-    "zustand": "^4.4.1"
+    "zustand": "^4.4.1",
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
