@@ -10,8 +10,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
-console.log(`Starting server on port ${PORT}`);
-console.log(`Backend URL: ${BACKEND_URL}`);
+console.log(`🚀 Starting Aurora OSI Frontend Server`);
+console.log(`📍 Port: ${PORT}`);
+console.log(`🔗 Backend URL: ${BACKEND_URL}`);
+
+// Wrap startup in async IIFE to allow async operations
+(async () => {
+  // Test backend connectivity on startup
+  try {
+    const response = await fetch(`${BACKEND_URL}/health`, { timeout: 5000 });
+    if (response.ok) {
+      console.log(`✓ Backend service is reachable at ${BACKEND_URL}`);
+    } else {
+      console.warn(`⚠️ Backend service returned ${response.status}`);
+    }
+  } catch (err) {
+    console.warn(`⚠️ Backend service unreachable at ${BACKEND_URL}: ${err.message}`);
+    console.warn(`   Frontend will run, but API calls may fail. Configure BACKEND_URL environment variable.`);
+  }
+})();
 
 // Proxy API calls to backend
 app.use('/api', createProxyMiddleware({
@@ -21,8 +38,15 @@ app.use('/api', createProxyMiddleware({
     '^/api': ''
   },
   onError: (err, req, res) => {
-    console.error('Proxy error:', err);
-    res.status(503).json({ error: 'Backend service unavailable' });
+    console.error(`❌ Proxy error for ${req.path}:`, err.message);
+    res.status(503).json({ 
+      error: 'Backend service unavailable',
+      details: `Could not reach backend at ${BACKEND_URL}`,
+      suggestion: `Set BACKEND_URL environment variable to your backend service URL`
+    });
+  },
+  onProxyRes: (proxyRes, req, res) => {
+    proxyRes.headers['X-Proxied-By'] = 'Aurora Frontend';
   }
 }));
 
