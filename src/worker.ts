@@ -1,10 +1,11 @@
 import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler';
+import type { ExportedHandler } from '@cloudflare/workers-types';
 
-type Env = {
+interface Env {
   __STATIC_CONTENT: KVNamespace;
-};
+}
 
-export default {
+const worker: ExportedHandler<Env> = {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
       return await getAssetFromKV(
@@ -40,6 +41,8 @@ export default {
       return new Response('Internal Server Error', { status: 500 });
     }
   },
-} as ExportedHandler<Env>;
+};
+
+export default worker;
 
 declare const __STATIC_CONTENT_MANIFEST: string;

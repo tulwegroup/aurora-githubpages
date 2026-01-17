@@ -38,6 +38,7 @@
     "postcss": "^8.4.31",
     "autoprefixer": "^10.4.16",
     "@cloudflare/kv-asset-handler": "^0.3.0",
+    "@cloudflare/workers-types": "^4.20240613.0",
     "wrangler": "^3.0.0"
   },
   "engines": {
