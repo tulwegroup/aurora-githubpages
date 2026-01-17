@@ -4,7 +4,6 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  base: '/aurora-githubpages/',
   plugins: [react()],
   css: {
     postcss: './postcss.config.js',
