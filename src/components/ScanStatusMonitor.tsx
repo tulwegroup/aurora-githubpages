@@ -32,8 +32,8 @@ const ScanStatusMonitor: React.FC<ScanStatusMonitorProps> = ({ scanId, isVisible
         try {
             const response = await fetch(`/scans/${scanId}`);
             if (response.ok) {
-                const data = await response.json();
-                setScanData(data);
+                const data = await response.json() as any;
+                setScanData(data as ScanStatusData);
 
                 // Calculate elapsed time
                 if (data.metadata.started_at) {

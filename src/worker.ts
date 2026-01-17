@@ -1,11 +1,10 @@
 import { getAssetFromKV, NotFoundError, MethodNotAllowedError } from '@cloudflare/kv-asset-handler';
-import type { ExportedHandler } from '@cloudflare/workers-types';
 
 interface Env {
   __STATIC_CONTENT: KVNamespace;
 }
 
-const worker: ExportedHandler<Env> = {
+const worker = {
   async fetch(request: Request, env: Env): Promise<Response> {
     try {
       return await getAssetFromKV(

@@ -109,7 +109,7 @@ const ConfigView: React.FC = () => {
         try {
             const response = await fetch('/scans?limit=10');
             if (response.ok) {
-                const data = await response.json();
+                const data = await response.json() as any;
                 setScanHistory(data.scans || []);
                 addLog(`Loaded ${data.scans?.length || 0} previous scans`);
             }
@@ -165,7 +165,7 @@ const ConfigView: React.FC = () => {
             });
 
             if (response.ok) {
-                const result = await response.json();
+                const result = await response.json() as any;
                 const scanId = result.scan_id;
                 
                 // Update active campaign with new scan parameters
@@ -186,7 +186,7 @@ const ConfigView: React.FC = () => {
                 // Reload history
                 await loadScanHistory();
             } else {
-                const error = await response.json();
+                const error = await response.json() as any;
                 addLog(`✗ Scan failed: ${error.detail || 'Unknown error'}`);
             }
         } catch (e: any) {
