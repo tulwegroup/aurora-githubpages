@@ -1,0 +1,6 @@
+{
+  "pages_build_configuration": {
+    "build_command": "npm install && npm run build",
+    "build_dir": "dist"
+  }
+}
