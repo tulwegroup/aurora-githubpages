@@ -2,24 +2,33 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Install Python and dependencies
+RUN apk add --no-cache python3 py3-pip py3-psycopg2
+
+# Copy backend requirements
+COPY backend/requirements.txt ./backend/
+
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -r ./backend/requirements.txt
+
+# Copy package files for Node
 COPY package*.json ./
 
-# Install dependencies
+# Install Node dependencies
 RUN npm install && npm install --save express http-proxy-middleware
 
-# Copy application
+# Copy entire application
 COPY . .
 
 # Build frontend
 RUN npm run build
 
-# Expose port
-EXPOSE 3000
+# Expose ports
+EXPOSE 3000 8000
 
-# Health check
+# Health check for frontend
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Start server
-CMD ["node", "server.js"]
+# Start both backend and frontend
+CMD sh -c 'python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &' && node server.js

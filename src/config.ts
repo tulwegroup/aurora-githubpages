@@ -8,9 +8,9 @@ export const APP_CONFIG = {
     MODE: ENV.MODE || 'production',
     
     API: {
-        // Use relative path - will hit same server
-        // Nginx will proxy /api/* to backend on :8000
-        BASE_URL: ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000',
+        // In production (Railway): Use /api relative path, server.js proxies to localhost:8000
+        // In development: Use localhost:8000 directly
+        BASE_URL: ENV.MODE === 'production' ? '/api' : (ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000'),
         
         // Infrastructure Details
         DB_PROVIDER: 'Neon Serverless Postgres',
