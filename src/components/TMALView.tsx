@@ -18,27 +18,29 @@ const DEFAULT_PROJECTS = [
 const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
   // Combine defaults with active campaign if it's new
   const projects = React.useMemo(() => {
-     const activeName = campaign.regionName || campaign.name || 'Unknown Region';
+     const activeName = campaign?.regionName || campaign?.name || 'Unknown Region';
      const campaignProject = {
          id: 'active-campaign',
          name: `Active Mission: ${activeName}`,
          lat: 0,
          lon: 0,
-         type: campaign.resourceType,
+         type: campaign?.resourceType || 'Unknown',
          context: `Live Scan (${activeName})`
      };
      
      try {
-         const coords = campaign.targetCoordinates.match(/-?\d+(\.\d+)?/g);
+         const coords = campaign?.targetCoordinates?.match(/-?\d+(\.\d+)?/g);
          if (coords && coords.length >= 2) {
              let lat = parseFloat(coords[0]);
-             if (campaign.targetCoordinates.includes('S')) lat = -lat;
+             if (campaign?.targetCoordinates?.includes('S')) lat = -lat;
              let lon = parseFloat(coords[1]);
-             if (campaign.targetCoordinates.includes('W')) lon = -lon;
+             if (campaign?.targetCoordinates?.includes('W')) lon = -lon;
              campaignProject.lat = lat;
              campaignProject.lon = lon;
          }
-     } catch(e) {}
+     } catch(e) {
+         console.error('Failed to parse campaign coordinates:', e);
+     }
 
      const existing = DEFAULT_PROJECTS.find(p => p.name.includes(activeName));
      if (existing) return [campaignProject, ...DEFAULT_PROJECTS.filter(p => p.id !== existing.id)];
@@ -90,7 +92,7 @@ const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
                   date.setMonth(date.getMonth() - (11 - i));
                   const monthName = date.toLocaleString('default', { month: 'short' });
                   
-                  if (selectedProject.type.includes('Hydrocarbon')) {
+                  if (selectedProject?.type?.includes('Hydrocarbon')) {
                       newTrend = 'Subsidence';
                       newVel = -12.4;
                       baseDeformation -= (1 + Math.random());

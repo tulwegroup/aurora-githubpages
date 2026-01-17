@@ -26,7 +26,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
     const grid: number[][] = [];
     
     // Vary geometry based on campaign type
-    const isHydro = campaign.resourceType?.includes('Hydrocarbon') || campaign.targets?.some(t => t.resourceType.includes('Hydrocarbon'));
+    const isHydro = campaign?.resourceType?.includes('Hydrocarbon') || campaign?.targets?.some(t => t.resourceType.includes('Hydrocarbon'));
     
     for(let y=0; y<size; y++) {
         const row: number[] = [];
@@ -67,14 +67,16 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
      // Parse Lat/Lon from Campaign String
      let lat = 0, lon = 0;
      try {
-         const coords = campaign.targetCoordinates.match(/-?\d+(\.\d+)?/g);
+         const coords = campaign?.targetCoordinates?.match(/-?\d+(\.\d+)?/g);
          if (coords && coords.length >= 2) {
              lat = parseFloat(coords[0]);
-             if (campaign.targetCoordinates.includes('S')) lat = -lat;
+             if (campaign?.targetCoordinates?.includes('S')) lat = -lat;
              lon = parseFloat(coords[1]);
-             if (campaign.targetCoordinates.includes('W')) lon = -lon;
+             if (campaign?.targetCoordinates?.includes('W')) lon = -lon;
          }
-     } catch(e) {}
+     } catch(e) {
+         console.error('Failed to parse campaign coordinates:', e);
+     }
 
      // 1. Call Inversion Metrics
      let pResult: any = await AuroraAPI.runPhysicsInversion(lat, lon, 2500); 
@@ -95,11 +97,11 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
          await new Promise(r => setTimeout(r, 1500)); // Simulate compute time
          setTomographyData(generateFallbackSlice());
          
-         const isHydro = campaign.resourceType?.includes('Hydrocarbon') || campaign.targets?.some(t => t.resourceType.includes('Hydrocarbon'));
+         const isHydroFallback = campaign?.resourceType?.includes('Hydrocarbon') || campaign?.targets?.some(t => t.resourceType.includes('Hydrocarbon'));
 
          pResult = {
              ...pResult,
-             structure: isHydro ? "Salt Diapir (Inferred)" : "Anticline (Inferred)",
+             structure: isHydroFallback ? "Salt Diapir (Inferred)" : "Anticline (Inferred)",
              residuals: { mass_conservation: 0.0012, momentum_balance: 0.004 }
          };
      }

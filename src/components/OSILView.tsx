@@ -10,7 +10,7 @@ interface OSILViewProps {
 }
 
 const OSILView: React.FC<OSILViewProps> = ({ campaign }) => {
-  const [domain, setDomain] = useState<'Land' | 'Marine'>(campaign.environment || 'Land');
+  const [domain, setDomain] = useState<'Land' | 'Marine'>(campaign?.environment || 'Land');
   const [schedule, setSchedule] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [taskingStatus, setTaskingStatus] = useState<string | null>(null);
@@ -20,53 +20,64 @@ const OSILView: React.FC<OSILViewProps> = ({ campaign }) => {
   // STRICT FILTERING: Match streams to Campaign Environment AND Sensor Needs
   const sortedStreams = INGESTION_STREAMS.map(s => {
       // 1. Filter by Domain (Land vs Marine)
-      const matchesDomain = !s.domain || s.domain === campaign.environment;
+      const matchesDomain = !s.domain || s.domain === (campaign?.environment || 'Land');
       
       // 2. Identify if this sensor is critical for the active Resource Type
-      const isCritical = (campaign.resourceType.includes('Hydrocarbon') && s.type.includes('SAR')) || 
-                         (campaign.resourceType.includes('Mineral') && s.type.includes('Gravimetry'));
+      const isCritical = (campaign?.resourceType?.includes('Hydrocarbon') && s.type.includes('SAR')) || 
+                         (campaign?.resourceType?.includes('Mineral') && s.type.includes('Gravimetry'));
 
       const isTasked = matchesDomain && (isCritical || s.status === SystemStatus.ONLINE);
 
       return { 
           ...s, 
           is_tasked: isTasked,
-          active_region: isTasked ? (campaign.regionName || campaign.name) : null,
+          active_region: isTasked ? (campaign?.regionName || campaign?.name || 'Unknown') : null,
           throughput: isTasked ? s.throughput + (Math.random() * 0.5) : 0 // Zero throughput for non-tasked streams
       };
   }).sort((a, b) => (a.is_tasked === b.is_tasked) ? 0 : a.is_tasked ? -1 : 1);
 
   useEffect(() => {
       const checkLiveStatus = async () => {
-          const connectivity = await AuroraAPI.checkConnectivity();
-          if (connectivity.status === SystemStatus.ONLINE && connectivity.mode === 'Cloud') {
-              setBackendStatus('Connected');
-              setGeeActive(true);
-          } else {
+          try {
+              const connectivity = await AuroraAPI.checkConnectivity();
+              if (connectivity.status === SystemStatus.ONLINE && connectivity.mode === 'Cloud') {
+                  setBackendStatus('Connected');
+                  setGeeActive(true);
+              } else {
+                  setBackendStatus('Unreachable');
+                  setGeeActive(false);
+              }
+          } catch (e) {
               setBackendStatus('Unreachable');
               setGeeActive(false);
           }
       };
       
       checkLiveStatus();
-      setDomain(campaign.environment || 'Land');
+      setDomain(campaign?.environment || 'Land');
       
       const fetchSchedule = async () => {
           setIsLoading(true);
           let lat = 0, lon = 0;
           try {
-            const nums = campaign.targetCoordinates.match(/-?\d+(\.\d+)?/g);
+            const nums = campaign?.targetCoordinates?.match(/-?\d+(\.\d+)?/g);
             if (nums && nums.length >= 2) {
                  lat = parseFloat(nums[0]);
-                 if (campaign.targetCoordinates.includes('S')) lat = -lat;
+                 if (campaign?.targetCoordinates?.includes('S')) lat = -lat;
                  lon = parseFloat(nums[1]);
-                 if (campaign.targetCoordinates.includes('W')) lon = -lon;
+                 if (campaign?.targetCoordinates?.includes('W')) lon = -lon;
              }
-          } catch (e) {}
+          } catch (e) {
+              console.error('Failed to parse coordinates:', e);
+          }
 
-          const data = await AuroraAPI.getSatelliteSchedule(lat, lon);
-          if (data && data.schedule) {
-              setSchedule(data.schedule);
+          try {
+              const data = await AuroraAPI.getSatelliteSchedule(lat, lon);
+              if (data && data.schedule) {
+                  setSchedule(data.schedule);
+              }
+          } catch (e) {
+              console.error('Failed to fetch satellite schedule:', e);
           }
           setIsLoading(false);
       };
