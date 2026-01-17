@@ -8,8 +8,9 @@ export const APP_CONFIG = {
     MODE: ENV.MODE || 'production',
     
     API: {
-        // Vercel/Vite environment variable with a hardcoded fallback for safety
-        BASE_URL: ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'https://aurora-osi-v4.up.railway.app',
+        // Use relative path - will hit same server
+        // Nginx will proxy /api/* to backend on :8000
+        BASE_URL: ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000',
         
         // Infrastructure Details
         DB_PROVIDER: 'Neon Serverless Postgres',
