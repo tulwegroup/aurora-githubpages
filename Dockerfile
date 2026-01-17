@@ -8,8 +8,8 @@ RUN apk add --no-cache python3 py3-pip py3-psycopg2
 # Copy backend requirements
 COPY backend/requirements.txt ./backend/
 
-# Install Python dependencies
-RUN pip3 install --no-cache-dir -r ./backend/requirements.txt
+# Install Python dependencies (use --break-system-packages for Alpine)
+RUN pip3 install --no-cache-dir --break-system-packages -r ./backend/requirements.txt
 
 # Copy package files for Node
 COPY package*.json ./
