@@ -28,13 +28,43 @@ class GEEDataFetcher:
     """Fetch satellite data from Google Earth Engine"""
 
     def __init__(self):
-        """Initialize GEE data fetcher"""
+        """Initialize GEE data fetcher with service account credentials"""
         try:
             import ee
-            ee.Initialize()
-            logger.info("Google Earth Engine initialized")
+            import json
+            import os
+            
+            # Try to authenticate with service account if credentials available
+            service_account_file = os.getenv("GEE_SERVICE_ACCOUNT_FILE")
+            service_account_json = os.getenv("GEE_SERVICE_ACCOUNT_JSON")
+            
+            if service_account_file and os.path.exists(service_account_file):
+                logger.info(f"📡 Initializing GEE with service account file: {service_account_file}")
+                ee.Authenticate(filename=service_account_file)
+                ee.Initialize(project=os.getenv("GEE_PROJECT_ID", "aurora-osi-gee"))
+                logger.info("✅ GEE initialized with service account file")
+            elif service_account_json:
+                logger.info("📡 Initializing GEE with service account JSON from environment")
+                # Parse JSON from environment variable
+                creds = json.loads(service_account_json)
+                # Write to temporary file for authentication
+                temp_creds_path = "/tmp/gee_service_account.json"
+                with open(temp_creds_path, 'w') as f:
+                    json.dump(creds, f)
+                ee.Authenticate(filename=temp_creds_path)
+                ee.Initialize(project=creds.get("project_id", os.getenv("GEE_PROJECT_ID", "aurora-osi-gee")))
+                logger.info("✅ GEE initialized with service account JSON")
+            else:
+                # Try default initialization (may use Application Default Credentials)
+                logger.warning("⚠️ No GEE service account credentials found. Attempting default initialization...")
+                ee.Initialize()
+                logger.info("GEE initialized with default credentials")
+                
         except Exception as e:
-            logger.warning(f"GEE initialization failed: {e}")
+            logger.error(f"❌ GEE initialization failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            raise
 
     def fetch_sentinel2(
         self,

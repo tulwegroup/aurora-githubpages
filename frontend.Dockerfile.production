@@ -1,0 +1,78 @@
+# Aurora OSI v3 - Frontend Service (React + Express only)
+# Standalone service for Railway deployment
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy frontend source
+COPY src ./src
+COPY index.html index.css tailwind.config.js postcss.config.js ./
+COPY vite.config.ts tsconfig.json ./
+COPY public ./public 2>/dev/null || true
+
+# Build React app
+RUN npm run build
+
+# Create Express server for production
+RUN cat > server.prod.js << 'EOF'
+import express from 'express';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import fs from 'fs';
+
+const app = express();
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
+const PORT = process.env.PORT || 3000;
+
+console.log(`🎯 Frontend configured with Backend URL: ${BACKEND_URL}`);
+
+// Serve static files from dist
+app.use(express.static(join(__dirname, 'dist')));
+
+// API proxy - forward all /api requests to backend
+app.use('/api', async (req, res) => {
+  try {
+    const url = `${BACKEND_URL}${req.path}`;
+    const response = await fetch(url, {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...req.headers,
+      },
+      body: req.method !== 'GET' ? JSON.stringify(req.body) : undefined,
+    });
+    
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error(`❌ Proxy error for ${req.method} ${req.path}:`, error.message);
+    res.status(503).json({ 
+      error: 'Backend unavailable',
+      message: error.message 
+    });
+  }
+});
+
+// SPA fallback
+app.get('*', (req, res) => {
+  res.sendFile(join(__dirname, 'dist', 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✓ Frontend server running on http://0.0.0.0:${PORT}`);
+});
+EOF
+
+# Expose port
+EXPOSE 3000
+
+# Start frontend
+CMD ["node", "server.prod.js"]

@@ -46,9 +46,11 @@ class Settings:
 
     # Google Earth Engine Configuration
     GEE_SERVICE_ACCOUNT_FILE: Optional[str] = os.getenv("GEE_SERVICE_ACCOUNT_FILE")
+    GEE_SERVICE_ACCOUNT_JSON: Optional[str] = os.getenv("GEE_SERVICE_ACCOUNT_JSON")
     GEE_PROJECT_ID: str = os.getenv("GEE_PROJECT_ID", "aurora-osi-gee")
     GEE_REQUEST_TIMEOUT: int = int(os.getenv("GEE_REQUEST_TIMEOUT", "300"))
     GEE_BATCH_SIZE: int = int(os.getenv("GEE_BATCH_SIZE", "100"))
+    ENABLE_GEE_INTEGRATION: bool = (GEE_SERVICE_ACCOUNT_FILE is not None or GEE_SERVICE_ACCOUNT_JSON is not None)
 
     # Authentication Configuration
     SECRET_KEY: str = os.getenv(
