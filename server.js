@@ -2,6 +2,7 @@ import express from 'express';
 import { createProxyMiddleware } from 'http-proxy-middleware';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,7 +16,6 @@ console.log(`📍 Port: ${PORT}`);
 console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 
 // Try to read and display backend logs
-const fs = require('fs');
 try {
   const logs = fs.readFileSync('/tmp/backend.log', 'utf8').split('\n').slice(-10);
   console.log(`\n📋 Last 10 lines of backend log:`);
