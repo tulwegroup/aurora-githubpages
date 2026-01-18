@@ -180,8 +180,7 @@ const ConfigView: React.FC = () => {
                 // Reload history
                 await loadScanHistory();
             } else {
-                const error = await response.json() as any;
-                addLog(`✗ Scan failed: ${error.detail || 'Unknown error'}`);
+                addLog(`✗ Scan failed: ${result?.detail || 'Unknown error'}`);
             }
         } catch (e: any) {
             addLog(`✗ Scan request error: ${e.message}`);
