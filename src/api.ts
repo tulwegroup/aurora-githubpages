@@ -20,9 +20,15 @@ export class AuroraAPI {
   private static serverStatus: any = null;
 
   private static getBaseUrl(): string {
-      // On Railway production: ALWAYS use /api proxy (server.js handles routing)
+      // Check for localStorage override first (user manual override via SYNCHRONIZE button)
+      const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
+      if (override && override.trim()) {
+        console.log(`Using localStorage override: ${override}`);
+        return override.trim().replace(/\/+$/, '');
+      }
+      
+      // On Railway production: use /api proxy (server.js handles routing)
       // On localhost: use direct backend URL
-      // Check if we're on a non-localhost domain (Railway deployment)
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
         const isProduction = !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
@@ -32,12 +38,9 @@ export class AuroraAPI {
         }
       }
       
-      // Development: Check for override or config
-      const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
+      // Development: Check config
       const configUrl = APP_CONFIG.API.BASE_URL;
-      
-      // Use override if set, otherwise config, otherwise default
-      const rawUrl = override || configUrl || 'http://localhost:8000';
+      const rawUrl = configUrl || 'http://localhost:8000';
       return rawUrl.replace(/\/+$/, '');
   }
 
