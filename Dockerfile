@@ -44,7 +44,7 @@ echo "Starting Aurora OSI services..."
 export BACKEND_URL=${BACKEND_URL:-http://localhost:8000}
 echo "Backend URL: $BACKEND_URL"
 echo "Starting FastAPI backend on port 8000..."
-python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level info 2>&1 | tee /tmp/backend.log &
+python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level info > /tmp/backend.log 2>&1 &
 BACKEND_PID=$!
 echo "Backend PID: $BACKEND_PID"
 
@@ -56,6 +56,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
   ATTEMPT=$((ATTEMPT + 1))
   if ! kill -0 $BACKEND_PID 2>/dev/null; then
     echo "❌ Backend process crashed after $ATTEMPT seconds!"
+    echo "=== Backend startup output ==="
     cat /tmp/backend.log
     exit 1
   fi
@@ -70,7 +71,8 @@ done
 
 if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
   echo "❌ Backend failed to start listening after $MAX_ATTEMPTS attempts"
-  tail -20 /tmp/backend.log
+  echo "=== Last backend logs ==="
+  tail -30 /tmp/backend.log
   kill $BACKEND_PID 2>/dev/null || true
   exit 1
 fi

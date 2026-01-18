@@ -56,39 +56,51 @@ except Exception as e:
     logger_temp.warning(f"⚠️ Could not initialize GEE: {str(e)}")
     gee_fetcher = None
 
-from .config import settings
+from .config import settings, Settings
 from .routers import system
 
 # Configure logging for Cloud Run
-log_level = settings.get_log_level()
+try:
+    log_level = Settings.get_log_level()
+except Exception as e:
+    log_level = logging.INFO
+    print(f"Warning: Could not get log level: {e}")
+    
 logging.basicConfig(
     level=log_level,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# FastAPI app
-app = FastAPI(
-    title="Aurora OSI v3",
-    description="Planetary-scale Physics-Causal Quantum-Assisted Sovereign Subsurface Intelligence",
-    version="3.1.0"
-)
+# FastAPI app - wrapped in try-catch to catch any startup errors
+try:
+    app = FastAPI(
+        title="Aurora OSI v3",
+        description="Planetary-scale Physics-Causal Quantum-Assisted Sovereign Subsurface Intelligence",
+        version="3.1.0"
+    )
 
-# CORS configuration
-cors_origins = settings.CORS_ORIGINS
-if os.getenv("ENVIRONMENT") == "development":
-    cors_origins.extend(["http://localhost:3000", "http://localhost:5173"])
+    # CORS configuration
+    cors_origins = settings.CORS_ORIGINS
+    if os.getenv("ENVIRONMENT") == "development":
+        cors_origins.extend(["http://localhost:3000", "http://localhost:5173"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_credentials=settings.CORS_CREDENTIALS,
-    allow_methods=settings.CORS_METHODS,
-    allow_headers=settings.CORS_HEADERS,
-)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_credentials=settings.CORS_CREDENTIALS,
+        allow_methods=settings.CORS_METHODS,
+        allow_headers=settings.CORS_HEADERS,
+    )
 
-# Include routers
-app.include_router(system.router)
+    # Include routers
+    app.include_router(system.router)
+    
+except Exception as e:
+    print(f"❌ CRITICAL ERROR during app initialization: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 # Flag to track startup completion
 _startup_complete = False
