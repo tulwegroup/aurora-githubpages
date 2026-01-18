@@ -20,43 +20,65 @@ export class AuroraAPI {
   private static serverStatus: any = null;
 
   private static getBaseUrl(): string {
-      // Check for localStorage override first (user manual override via SYNCHRONIZE button)
+      // Priority 1: Respect localStorage override if user manually set it
       const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
       if (override && override.trim()) {
-        console.log(`Using localStorage override: ${override}`);
+        console.log(`📍 Using manual backend override: ${override}`);
         return override.trim().replace(/\/+$/, '');
       }
       
-      // On Railway production: use /api proxy (server.js handles routing)
-      // On localhost: use direct backend URL
+      // Priority 2: Auto-detect based on environment
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        const isProduction = !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
         
-        if (isProduction) {
-          return '/api'; // Use Express proxy on same origin
+        // On Railway or any production (non-localhost):
+        // Backend runs in same container, accessed via Express proxy at /api
+        if (!hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
+          console.log(`🚀 Production environment detected (${hostname}): using /api proxy`);
+          return '/api';
         }
+        
+        // On localhost: Backend is separate process on port 8000
+        console.log(`💻 Local development detected: using direct backend URL`);
+        return 'http://localhost:8000';
       }
       
-      // Development: Check config
-      const configUrl = APP_CONFIG.API.BASE_URL;
-      const rawUrl = configUrl || 'http://localhost:8000';
+      // Fallback (shouldn't reach here in browser)
+      return 'http://localhost:8000';
+  }
       return rawUrl.replace(/\/+$/, '');
   }
 
   /**
    * Initializes connection with the Railway/Neon stack.
+   * Includes retry logic for backend startup delays.
    */
   static async init(): Promise<boolean> {
     this.baseUrl = this.getBaseUrl();
-    try {
-      const health = await this.checkConnectivity();
-      this.isBackendOnline = health.status !== SystemStatus.OFFLINE;
-      return this.isBackendOnline;
-    } catch (e) {
-      this.isBackendOnline = false;
-      return false;
+    console.log(`📡 Initializing Aurora API with base URL: ${this.baseUrl}`);
+    
+    // Retry logic: try up to 3 times with delays
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const health = await this.checkConnectivity();
+        this.isBackendOnline = health.status !== SystemStatus.OFFLINE;
+        if (this.isBackendOnline) {
+          console.log(`✅ Backend online (attempt ${attempt}/3)`);
+          return true;
+        }
+      } catch (e) {
+        console.warn(`⚠️ Connectivity check failed (attempt ${attempt}/3): ${(e as Error).message}`);
+      }
+      
+      // Wait before next attempt (except on last attempt)
+      if (attempt < 3) {
+        await new Promise(r => setTimeout(r, 2000 * attempt)); // 2s, 4s delays
+      }
     }
+    
+    console.warn(`❌ Backend still unreachable after 3 attempts. Will retry in App.tsx startup.`);
+    this.isBackendOnline = false;
+    return false;
   }
 
   static getActiveEndpoint = () => this.getBaseUrl();

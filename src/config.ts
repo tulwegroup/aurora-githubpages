@@ -8,12 +8,11 @@ export const APP_CONFIG = {
     MODE: ENV.MODE || 'production',
     
     API: {
-        // In production (Railway): Use /api relative path, server.js proxies to localhost:8000
-        // In development: Use localhost:8000 directly
-        // Check hostname - if not localhost, use /api proxy
-        BASE_URL: (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) 
-          ? '/api' 
-          : (ENV.MODE === 'production' ? '/api' : (ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000')),
+        // Automatic detection (no manual config needed):
+        // - Railway production: Always use /api (Express proxies to localhost:8000)
+        // - localhost: Use http://localhost:8000 directly
+        // Backend runs in same container, automatically proxied through Express
+        BASE_URL: 'auto-detect',
         
         // Infrastructure Details
         DB_PROVIDER: 'Neon Serverless Postgres',
