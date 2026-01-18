@@ -23,8 +23,9 @@ const OSILView: React.FC<OSILViewProps> = ({ campaign }) => {
       const matchesDomain = !s.domain || s.domain === (campaign?.environment || 'Land');
       
       // 2. Identify if this sensor is critical for the active Resource Type
-      const isCritical = (campaign?.resourceType?.includes('Hydrocarbon') && s.type.includes('SAR')) || 
-                         (campaign?.resourceType?.includes('Mineral') && s.type.includes('Gravimetry'));
+      const resourceType = campaign?.resourceType || '';
+      const isCritical = (resourceType && resourceType.includes('Hydrocarbon') && s.type.includes('SAR')) || 
+                         (resourceType && resourceType.includes('Mineral') && s.type.includes('Gravimetry'));
 
       const isTasked = matchesDomain && (isCritical || s.status === SystemStatus.ONLINE);
 

@@ -92,7 +92,7 @@ const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
                   date.setMonth(date.getMonth() - (11 - i));
                   const monthName = date.toLocaleString('default', { month: 'short' });
                   
-                  if (selectedProject?.type?.includes('Hydrocarbon')) {
+                  if (selectedProject?.type && selectedProject.type.includes('Hydrocarbon')) {
                       newTrend = 'Subsidence';
                       newVel = -12.4;
                       baseDeformation -= (1 + Math.random());
@@ -102,7 +102,7 @@ const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
                           thermalInertia: 650 + Math.random() * 50,
                           coherence: 0.9 - (i * 0.02)
                       };
-                  } else if (selectedProject.type.includes('Noble') || selectedProject.type.includes('Gas')) {
+                  } else if (selectedProject?.type && (selectedProject.type.includes('Noble') || selectedProject.type.includes('Gas'))) {
                       newTrend = 'Uplift';
                       newVel = 4.5;
                       baseDeformation += (0.5 + Math.random() * 0.5);

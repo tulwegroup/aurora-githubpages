@@ -29,7 +29,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
     const grid: number[][] = [];
     
     // Vary geometry based on campaign type
-    const isHydro = campaign?.resourceType?.includes('Hydrocarbon') || campaign?.targets?.some(t => t.resourceType.includes('Hydrocarbon'));
+    const isHydro = (campaign?.resourceType && campaign.resourceType.includes('Hydrocarbon')) || (campaign?.targets && campaign.targets.some(t => t?.resourceType?.includes('Hydrocarbon')));
     
     for(let y=0; y<size; y++) {
         const row: number[] = [];
@@ -100,7 +100,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
          await new Promise(r => setTimeout(r, 1500)); // Simulate compute time
          setTomographyData(generateFallbackSlice());
          
-         const isHydroFallback = campaign?.resourceType?.includes('Hydrocarbon') || campaign?.targets?.some(t => t.resourceType.includes('Hydrocarbon'));
+         const isHydroFallback = (campaign?.resourceType && campaign.resourceType.includes('Hydrocarbon')) || (campaign?.targets && campaign.targets.some(t => t?.resourceType?.includes('Hydrocarbon')));
 
          pResult = {
              ...pResult,
