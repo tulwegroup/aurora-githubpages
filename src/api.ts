@@ -20,9 +20,24 @@ export class AuroraAPI {
   private static serverStatus: any = null;
 
   private static getBaseUrl(): string {
+      // On Railway production: ALWAYS use /api proxy (server.js handles routing)
+      // On localhost: use direct backend URL
+      // Check if we're on a non-localhost domain (Railway deployment)
+      if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+        const isProduction = !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
+        
+        if (isProduction) {
+          return '/api'; // Use Express proxy on same origin
+        }
+      }
+      
+      // Development: Check for override or config
       const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
-      // Fallback hierarchy: Override > Config > Hardcoded Fallback
-      const rawUrl = override || APP_CONFIG.API.BASE_URL || 'https://aurora-backend-production.up.railway.app';
+      const configUrl = APP_CONFIG.API.BASE_URL;
+      
+      // Use override if set, otherwise config, otherwise default
+      const rawUrl = override || configUrl || 'http://localhost:8000';
       return rawUrl.replace(/\/+$/, '');
   }
 
