@@ -46,8 +46,6 @@ export class AuroraAPI {
       // Fallback (shouldn't reach here in browser)
       return 'http://localhost:8000';
   }
-      return rawUrl.replace(/\/+$/, '');
-  }
 
   /**
    * Initializes connection with the Railway/Neon stack.
