@@ -13,3 +13,4 @@ earthengine-api==0.1.359
 python-dotenv==1.0.0
 cors==1.0.1
 apscheduler==3.10.4
+psutil==5.9.6
