@@ -10,7 +10,7 @@ COPY backend/requirements.txt ./backend/
 
 # Install Python dependencies (use --break-system-packages for Alpine)
 # Use verbose output and fail on error
-RUN pip3 install --no-cache-dir --break-system-packages --require-hashes=no -r ./backend/requirements.txt && \
+RUN pip3 install --no-cache-dir --break-system-packages -r ./backend/requirements.txt && \
     echo "✓ Python dependencies installed" && \
     python3 -m pip list | grep -E "sqlalchemy|apscheduler|psutil" || (echo "❌ Missing critical packages!" && exit 1)
 
