@@ -92,12 +92,22 @@ app.include_router(system.router)
 
 # Flag to track startup completion
 _startup_complete = False
+gee_initialized = False  # Track GEE initialization state
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup - non-blocking"""
-    global _startup_complete
+    global _startup_complete, gee_initialized
     logger.info("🚀 Aurora OSI v3 Backend Starting")
+    
+    # Initialize GEE if available
+    try:
+        if gee_fetcher:
+            gee_initialized = True
+            logger.info("✓ GEE initialized")
+    except Exception as e:
+        logger.warning(f"⚠️ GEE initialization failed: {str(e)}")
+        gee_initialized = False
     
     # Initialize background scan scheduler
     try:
@@ -148,7 +158,8 @@ async def health_check():
         else:
             gee_status = "INITIALIZING"
     except Exception as e:
-        gee_status = f"FAILED: {str(e)[:50]}"
+        logger.warning(f"⚠️ GEE status check error: {str(e)}")
+        gee_status = "UNKNOWN"
     
     return {
         "status": "operational",
