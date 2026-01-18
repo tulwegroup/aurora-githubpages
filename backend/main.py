@@ -1050,123 +1050,377 @@ async def _schedule_satellite_acquisition(task_id: str):
 @app.post("/satellite-data")
 async def fetch_satellite_data(body: dict = None) -> Dict:
     """
-    Fetch satellite data from Google Earth Engine or return demo data
+    Fetch satellite data from Google Earth Engine.
+    Returns error if real data is not available - NO MOCK DATA.
     
-    Production: Fetches real Sentinel-2 L2A data
-    Demo: Returns synthetic spectral data
+    DEPRECATED: Use POST /spectral/real for new workflows.
+    This endpoint is kept for backwards compatibility.
     """
     try:
         latitude = body.get('latitude', -10.5) if body else -10.5
         longitude = body.get('longitude', 33.5) if body else 33.5
-        date_start = body.get('date_start', '2026-01-01') if body else '2026-01-01'
-        date_end = body.get('date_end', '2026-01-18') if body else '2026-01-18'
+        date_start = body.get('date_start', '2024-01-01') if body else '2024-01-01'
+        date_end = body.get('date_end', '2024-12-31') if body else '2024-12-31'
         
         logger.info(f"📡 Satellite data requested: ({latitude}, {longitude})")
         
-        # In production, would fetch from GEE here
-        # For now, return demo spectral data
+        # Try to fetch from GEE
+        if gee_fetcher and gee_initialized:
+            try:
+                spectral_data = gee_fetcher.fetch_sentinel2_data(
+                    latitude=latitude,
+                    longitude=longitude,
+                    start_date=date_start,
+                    end_date=date_end
+                )
+                
+                if spectral_data and "error" not in spectral_data:
+                    logger.info("✓ Real Sentinel-2 data fetched successfully")
+                    return spectral_data
+            except Exception as e:
+                logger.warning(f"⚠️ GEE fetch failed: {str(e)}")
         
-        # Simulate Sentinel-2 bands
-        bands = {
-            'B2_blue': {'wavelength': 490, 'resolution': 10, 'values': list(np.random.uniform(0.05, 0.15, 100))},
-            'B3_green': {'wavelength': 560, 'resolution': 10, 'values': list(np.random.uniform(0.08, 0.20, 100))},
-            'B4_red': {'wavelength': 665, 'resolution': 10, 'values': list(np.random.uniform(0.04, 0.12, 100))},
-            'B5_re1': {'wavelength': 705, 'resolution': 20, 'values': list(np.random.uniform(0.10, 0.25, 50))},
-            'B6_re2': {'wavelength': 740, 'resolution': 20, 'values': list(np.random.uniform(0.08, 0.22, 50))},
-            'B7_re3': {'wavelength': 783, 'resolution': 20, 'values': list(np.random.uniform(0.12, 0.28, 50))},
-            'B8_nir': {'wavelength': 842, 'resolution': 10, 'values': list(np.random.uniform(0.20, 0.50, 100))},
-            'B11_swir1': {'wavelength': 1610, 'resolution': 20, 'values': list(np.random.uniform(0.05, 0.15, 50))},
-            'B12_swir2': {'wavelength': 2190, 'resolution': 20, 'values': list(np.random.uniform(0.02, 0.10, 50))},
-        }
-        
-        # Calculate NDVI (Normalized Difference Vegetation Index)
-        red = np.array(bands['B4_red']['values'][:50])
-        nir = np.array(bands['B8_nir']['values'][:50])
-        ndvi = (nir - red) / (nir + red + 1e-8)
-        
+        # No real data available
         return {
-            "status": "success",
-            "coordinates": {"latitude": latitude, "longitude": longitude},
-            "date_acquired": datetime.now().isoformat(),
-            "sensor": "Sentinel-2",
-            "level": "L2A",
-            "cloud_coverage": 15.2,
-            "resolution_m": 10,
-            "bands": bands,
-            "indices": {
-                "ndvi": {
-                    "name": "Normalized Difference Vegetation Index",
-                    "values": list(ndvi),
-                    "range": [float(ndvi.min()), float(ndvi.max())]
-                },
-                "ndbi": {
-                    "name": "Normalized Difference Built-up Index",
-                    "values": list(np.random.uniform(-0.3, 0.5, 50)),
-                    "range": [-0.3, 0.5]
-                }
-            },
-            "metadata": {
-                "orbital_number": 12487,
-                "relative_orbit": 63,
-                "mgrs_tile": "36KCD",
-                "processing_baseline": "04.00"
-            }
+            "status": "error",
+            "error": "Real satellite data not available for this location/timeframe. Please configure GEE credentials.",
+            "code": "NO_DATA_AVAILABLE",
+            "coordinates": {"latitude": latitude, "longitude": longitude}
         }
     except Exception as e:
         logger.error(f"❌ Satellite data fetch error: {str(e)}")
         return {
             "status": "error",
-            "message": str(e),
-            "demo_data": True
+            "error": str(e),
+            "code": "FETCH_ERROR"
         }
 
 
 @app.post("/analyze-spectra")
 async def analyze_spectral_data(body: dict = None) -> Dict:
     """
-    Perform spectral analysis on satellite data
-    Detect minerals based on absorption features
+    Perform spectral analysis on satellite data.
+    Returns error if analysis cannot be performed - NO MOCK DATA.
+    
+    DEPRECATED: Use POST /pinn/analyze, /ushe/analyze for new workflows.
+    This endpoint is kept for backwards compatibility.
     """
     try:
         logger.info("📊 Spectral analysis started")
         
-        # Demo mineral detection
-        detections = [
-            {
-                "mineral": "Copper",
-                "confidence": 0.92,
-                "wavelength_feature": 810,
-                "location": {"lat": -10.5, "lon": 33.5},
-                "area_km2": 12.5
-            },
-            {
-                "mineral": "Gold",
-                "confidence": 0.87,
-                "wavelength_feature": 1250,
-                "location": {"lat": -10.51, "lon": 33.51},
-                "area_km2": 8.3
-            },
-            {
-                "mineral": "Cobalt",
-                "confidence": 0.82,
-                "wavelength_feature": 1100,
-                "location": {"lat": -10.52, "lon": 33.52},
-                "area_km2": 5.2
-            }
-        ]
+        spectral_data = body.get("spectral_data") if body else None
         
+        if not spectral_data:
+            return {
+                "status": "error",
+                "error": "Missing spectral_data in request body",
+                "code": "MISSING_DATA"
+            }
+        
+        # TODO: Implement actual spectral analysis
+        # For now, return error indicating spectral analysis not yet available
         return {
-            "status": "success",
-            "analysis_timestamp": datetime.now().isoformat(),
-            "total_detections": len(detections),
-            "detections": detections,
-            "coverage_percentage": 95.2,
-            "average_confidence": np.mean([d["confidence"] for d in detections]),
-            "processing_time_seconds": 23.5
+            "status": "error",
+            "error": "Spectral analysis not yet implemented. Please use the Mission Control workflow.",
+            "code": "ANALYSIS_NOT_READY"
         }
     except Exception as e:
         logger.error(f"❌ Spectral analysis error: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "error",
+            "error": str(e),
+            "code": "ANALYSIS_ERROR"
+        }
+
+
+# ===== MISSION CONTROL WORKFLOW ENDPOINTS =====
+# These endpoints implement the 7-step scan workflow:
+# 1. Fetch Satellite Data
+# 2. Spectral Analysis
+# 3. PINN Processing
+# 4. USHE Harmonization
+# 5. TMAL Temporal Analysis
+# 6. Visualization Generation
+# 7. Database Storage
+
+@app.post("/spectral/real")
+async def fetch_real_spectral_data(body: dict = None) -> Dict:
+    """
+    Fetch real spectral data from satellite or spectral library.
+    Returns error if real data is not available - NO MOCK DATA.
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        aoi = body.get("aoi")
+        mineral = body.get("mineral")
+        
+        if not aoi or not mineral:
+            return {"error": "Missing required fields: aoi, mineral", "code": "MISSING_FIELDS"}
+        
+        latitude = aoi.get("latitude")
+        longitude = aoi.get("longitude")
+        
+        if latitude is None or longitude is None:
+            return {"error": "Invalid AOI coordinates", "code": "INVALID_AOI"}
+        
+        logger.info(f"🔍 Fetching real spectral data for {mineral} at ({latitude}, {longitude})")
+        
+        # Try to fetch from GEE
+        if gee_fetcher and gee_initialized:
+            try:
+                spectral_data = gee_fetcher.fetch_sentinel2_data(
+                    latitude=latitude,
+                    longitude=longitude,
+                    start_date=body.get("start_date", "2024-01-01"),
+                    end_date=body.get("end_date", "2024-12-31")
+                )
+                
+                if spectral_data and "error" not in spectral_data:
+                    logger.info("✓ Real Sentinel-2 data fetched successfully")
+                    return {
+                        "status": "success",
+                        "source": "sentinel2",
+                        "data": spectral_data
+                    }
+            except Exception as e:
+                logger.warning(f"⚠️ GEE fetch failed: {str(e)}")
+        
+        # No real data available
+        return {
+            "error": "Real satellite data not available for this location/timeframe",
+            "code": "NO_DATA_AVAILABLE",
+            "details": {
+                "location": f"({latitude}, {longitude})",
+                "mineral": mineral
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Spectral fetch error: {str(e)}")
+        return {"error": str(e), "code": "FETCH_ERROR"}
+
+
+@app.post("/pinn/analyze")
+async def run_pinn_analysis(body: dict = None) -> Dict:
+    """
+    Run Physics-Informed Neural Network (PINN) analysis.
+    Returns error if analysis cannot be performed - NO MOCK DATA.
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
+        satellite_data = body.get("satellite_data")
+        
+        if not all([latitude, longitude, satellite_data]):
+            return {"error": "Missing required fields: latitude, longitude, satellite_data", "code": "MISSING_FIELDS"}
+        
+        logger.info(f"🧠 Running PINN analysis at ({latitude}, {longitude})")
+        
+        # TODO: Implement actual PINN analysis
+        # For now, return error indicating PINN model not yet available
+        return {
+            "error": "PINN analysis not yet implemented - model training in progress",
+            "code": "PINN_NOT_READY",
+            "details": {
+                "location": f"({latitude}, {longitude})",
+                "satellite_bands": len(satellite_data.get("bands", {}))
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ PINN analysis error: {str(e)}")
+        return {"error": str(e), "code": "PINN_ERROR"}
+
+
+@app.post("/ushe/analyze")
+async def run_ushe_analysis(body: dict = None) -> Dict:
+    """
+    Run USHE (Universal Spectral Harmonization Engine) analysis.
+    Harmonizes spectral data across different sensors.
+    Returns error if harmonization fails - NO MOCK DATA.
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        spectral_data = body.get("spectral_data")
+        
+        if not spectral_data:
+            return {"error": "Missing required field: spectral_data", "code": "MISSING_FIELDS"}
+        
+        logger.info("🔄 Running USHE harmonization")
+        
+        # TODO: Implement actual USHE harmonization
+        # For now, return error indicating USHE not yet available
+        return {
+            "error": "USHE analysis not yet implemented - spectral harmonization in development",
+            "code": "USHE_NOT_READY",
+            "details": {
+                "input_bands": len(spectral_data.get("bands", {}))
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ USHE analysis error: {str(e)}")
+        return {"error": str(e), "code": "USHE_ERROR"}
+
+
+@app.post("/tmal/analyze")
+async def run_tmal_analysis(body: dict = None) -> Dict:
+    """
+    Run TMAL (Temporal Mineral Analysis and Learning) analysis.
+    Analyzes temporal changes and trends in mineral signatures.
+    Returns error if analysis fails - NO MOCK DATA.
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
+        start_date = body.get("start_date")
+        end_date = body.get("end_date")
+        
+        if not all([latitude, longitude, start_date, end_date]):
+            return {"error": "Missing required fields: latitude, longitude, start_date, end_date", "code": "MISSING_FIELDS"}
+        
+        logger.info(f"⏱️ Running TMAL analysis at ({latitude}, {longitude}) from {start_date} to {end_date}")
+        
+        # TODO: Implement actual TMAL analysis
+        # For now, return error indicating TMAL not yet available
+        return {
+            "error": "TMAL analysis not yet implemented - temporal analysis engine in development",
+            "code": "TMAL_NOT_READY",
+            "details": {
+                "location": f"({latitude}, {longitude})",
+                "timeframe": f"{start_date} to {end_date}"
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ TMAL analysis error: {str(e)}")
+        return {"error": str(e), "code": "TMAL_ERROR"}
+
+
+@app.post("/visualizations/generate")
+async def generate_visualizations(body: dict = None) -> Dict:
+    """
+    Generate 2D and 3D visualizations from analysis results.
+    Returns error if visualization generation fails - NO MOCK DATA.
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        analysis_data = body.get("analysis_data")
+        viz_type = body.get("type", "both")  # 2d, 3d, or both
+        
+        if not analysis_data:
+            return {"error": "Missing required field: analysis_data", "code": "MISSING_FIELDS"}
+        
+        logger.info(f"📊 Generating {viz_type} visualizations")
+        
+        # TODO: Implement actual visualization generation
+        # For now, return error indicating visualization engine not yet available
+        return {
+            "error": "Visualization generation not yet implemented - rendering engine in development",
+            "code": "VIZ_NOT_READY",
+            "details": {
+                "requested_type": viz_type,
+                "available_data": list(analysis_data.keys())
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Visualization generation error: {str(e)}")
+        return {"error": str(e), "code": "VIZ_ERROR"}
+
+
+@app.post("/scans/store")
+async def store_scan_results(body: dict = None) -> Dict:
+    """
+    Store scan results and all analysis outputs to database.
+    Returns error if storage fails - NO MOCK DATA.
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        scan_id = body.get("scan_id")
+        scan_name = body.get("scan_name")
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
+        results = body.get("results")
+        
+        if not all([scan_id, scan_name, latitude, longitude, results]):
+            return {"error": "Missing required fields: scan_id, scan_name, latitude, longitude, results", "code": "MISSING_FIELDS"}
+        
+        logger.info(f"💾 Storing scan results for '{scan_name}' (ID: {scan_id})")
+        
+        # TODO: Implement database storage
+        # For now, return error indicating database not yet set up
+        return {
+            "error": "Database storage not yet implemented - schema in development",
+            "code": "DB_NOT_READY",
+            "details": {
+                "scan_id": scan_id,
+                "scan_name": scan_name,
+                "results_keys": list(results.keys())
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Scan storage error: {str(e)}")
+        return {"error": str(e), "code": "STORAGE_ERROR"}
+
+
+@app.get("/scans/history")
+async def get_all_scans() -> Dict:
+    """
+    Retrieve all historical scans from database.
+    Returns error if query fails - NO MOCK DATA.
+    """
+    try:
+        logger.info("📜 Retrieving scan history")
+        
+        # TODO: Query database for all scans
+        # For now, return error indicating database not yet set up
+        return {
+            "error": "Scan history not available - database not yet implemented",
+            "code": "DB_NOT_READY",
+            "scans": []
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Scan history retrieval error: {str(e)}")
+        return {"error": str(e), "code": "QUERY_ERROR"}
+
+
+@app.get("/scans/{scan_id}/details")
+async def get_scan_details(scan_id: str) -> Dict:
+    """
+    Retrieve detailed results for a specific scan.
+    Returns error if scan not found or query fails - NO MOCK DATA.
+    """
+    try:
+        logger.info(f"📖 Retrieving details for scan {scan_id}")
+        
+        # TODO: Query database for specific scan
+        # For now, return error indicating database not yet set up
+        return {
+            "error": f"Scan details not available - database not yet implemented",
+            "code": "DB_NOT_READY",
+            "scan_id": scan_id
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Scan details retrieval error: {str(e)}")
+        return {"error": str(e), "code": "QUERY_ERROR"}
 
 
 import asyncio

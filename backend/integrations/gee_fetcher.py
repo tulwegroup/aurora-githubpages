@@ -292,6 +292,79 @@ class GEEDataFetcher:
         return indices
 
 
+    def fetch_sentinel2_data(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: str = None,
+        end_date: str = None,
+        radius_m: int = 1000
+    ) -> Dict:
+        """
+        Fetch real Sentinel-2 satellite data for Mission Control workflow.
+        Returns formatted data or error object.
+        
+        Args:
+            latitude: Location latitude
+            longitude: Location longitude
+            start_date: Start date (YYYY-MM-DD), defaults to 30 days ago
+            end_date: End date (YYYY-MM-DD), defaults to today
+            radius_m: Search radius in meters
+        
+        Returns:
+            Dict with satellite data or error info
+        """
+        try:
+            # Set default dates if not provided
+            if not end_date:
+                end_date = datetime.now().strftime("%Y-%m-%d")
+            if not start_date:
+                start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+            
+            # Call the native fetch_sentinel2 method
+            satellite_data = self.fetch_sentinel2(
+                latitude=latitude,
+                longitude=longitude,
+                date_start=start_date,
+                date_end=end_date,
+                radius_m=radius_m
+            )
+            
+            if satellite_data is None:
+                return {
+                    "error": f"No Sentinel-2 data available for location ({latitude}, {longitude}) in timeframe {start_date} to {end_date}",
+                    "code": "NO_DATA"
+                }
+            
+            # Calculate spectral indices
+            indices = self.calculate_indices(satellite_data)
+            
+            # Return formatted data
+            return {
+                "status": "success",
+                "sensor": satellite_data.sensor,
+                "date": satellite_data.date.isoformat() if hasattr(satellite_data.date, 'isoformat') else str(satellite_data.date),
+                "latitude": satellite_data.latitude,
+                "longitude": satellite_data.longitude,
+                "cloud_coverage": satellite_data.cloud_coverage,
+                "resolution_m": satellite_data.resolution_m,
+                "bands": {k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in satellite_data.bands.items()},
+                "indices": indices,
+                "metadata": {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "search_radius_m": radius_m
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Sentinel-2 data fetch failed: {str(e)}")
+            return {
+                "error": f"Failed to fetch Sentinel-2 data: {str(e)}",
+                "code": "FETCH_ERROR"
+            }
+
+
 def get_gee_fetcher() -> GEEDataFetcher:
     """Get or create GEE data fetcher instance"""
     return GEEDataFetcher()
