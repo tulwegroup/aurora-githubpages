@@ -18,13 +18,31 @@ export class AuroraAPI {
   private static baseUrl = '';
   private static isBackendOnline = false;
   private static serverStatus: any = null;
+  private static overrideFailed = false; // Track if manual override fails
 
   private static getBaseUrl(): string {
-      // Priority 1: Respect localStorage override if user manually set it
+      // Priority 1: Respect localStorage override if user manually set it AND it hasn't failed
       const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
-      if (override && override.trim()) {
-        console.log(`📍 Using manual backend override: ${override}`);
-        return override.trim().replace(/\/+$/, '');
+      if (override && override.trim() && !this.overrideFailed) {
+        const trimmedOverride = override.trim().replace(/\/+$/, '');
+        // Check if this is a localhost URL but we're running on production
+        if (typeof window !== 'undefined') {
+          const hostname = window.location.hostname;
+          const isProduction = !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
+          const isLocalhostUrl = trimmedOverride.includes('localhost') || trimmedOverride.includes('127.0.0.1');
+          
+          if (isProduction && isLocalhostUrl) {
+            console.warn(`⚠️  Manual override (${trimmedOverride}) is for localhost but running on production (${hostname}) - will use auto-detection instead`);
+            this.overrideFailed = true;
+            // Fall through to auto-detection
+          } else {
+            console.log(`📍 Using manual backend override: ${trimmedOverride}`);
+            return trimmedOverride;
+          }
+        } else {
+          console.log(`📍 Using manual backend override: ${trimmedOverride}`);
+          return trimmedOverride;
+        }
       }
       
       // Priority 2: Auto-detect based on environment
@@ -84,8 +102,10 @@ export class AuroraAPI {
   static setBackendUrl(url: string) {
       if (!url || url.trim() === '') {
           localStorage.removeItem(STORAGE_KEYS.BACKEND_OVERRIDE);
+          this.overrideFailed = false;
       } else {
           localStorage.setItem(STORAGE_KEYS.BACKEND_OVERRIDE, url.trim());
+          this.overrideFailed = false; // Reset flag when user sets new URL
       }
       this.baseUrl = this.getBaseUrl();
   }

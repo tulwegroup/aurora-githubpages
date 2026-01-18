@@ -253,6 +253,18 @@ const ConfigView: React.FC = () => {
                         >
                             <Save size={16} /> SYNCHRONIZE
                         </button>
+                        <button 
+                            onClick={() => {
+                                AuroraAPI.setBackendUrl('');
+                                setManualUrl('');
+                                addLog('System: Backend override cleared - using auto-detection');
+                                setTimeout(() => runDiagnostics(), 100);
+                            }}
+                            className="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded flex items-center gap-2 transition"
+                            title="Clear override and use auto-detection"
+                        >
+                            ✕ CLEAR
+                        </button>
                     </div>
                     <p className="text-cyan-400 font-mono text-sm mb-4">TARGET: aurora-githubpages-production.up.railway.app</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
