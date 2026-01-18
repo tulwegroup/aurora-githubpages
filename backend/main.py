@@ -332,6 +332,23 @@ async def get_seismic_amplitude(survey_id: str, inline: int, crossline: int, dep
     }
 
 
+@app.post("/seismic/job")
+async def create_seismic_job(body: Dict) -> Dict:
+    """Create seismic processing job"""
+    import time
+    campaign_id = body.get("campaignId", "unknown")
+    
+    return {
+        "jobId": f"SEI-{int(time.time())}",
+        "status": "queued",
+        "campaignId": campaign_id,
+        "type": "seismic_processing",
+        "createdAt": datetime.now().isoformat(),
+        "progress": 0,
+        "estimatedCompletion": (datetime.now() + timedelta(hours=2)).isoformat()
+    }
+
+
 # ===== PHYSICS-INFORMED ENDPOINTS =====
 
 @app.get("/physics/residuals")
