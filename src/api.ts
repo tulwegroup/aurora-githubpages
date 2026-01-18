@@ -138,6 +138,14 @@ export class AuroraAPI {
     });
   }
 
+  static async listScans(limit: number = 100, offset: number = 0): Promise<any> {
+    try {
+      return await this.apiFetch(`/scans?limit=${limit}&offset=${offset}`);
+    } catch(e) {
+      return { total: 0, scans: [], limit, offset };
+    }
+  }
+
   static async getMissionStatus(missionId: string): Promise<any> {
     return this.apiFetch(`/scans/${missionId}`);
   }

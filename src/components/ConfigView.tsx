@@ -107,11 +107,10 @@ const ConfigView: React.FC = () => {
 
     const loadScanHistory = useCallback(async () => {
         try {
-            const response = await fetch('/scans?limit=10');
-            if (response.ok) {
-                const data = await response.json() as any;
-                setScanHistory(data.scans || []);
-                addLog(`Loaded ${data.scans?.length || 0} previous scans`);
+            const data = await AuroraAPI.listScans(10, 0);
+            if (data && data.scans) {
+                setScanHistory(data.scans);
+                addLog(`Loaded ${data.scans.length} previous scans`);
             }
         } catch (e) {
             addLog(`Failed to load scan history: ${e}`);
@@ -158,14 +157,9 @@ const ConfigView: React.FC = () => {
                 date_end: scanConfig.dateEnd || undefined
             };
 
-            const response = await fetch('/scans', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(requestBody)
-            });
+            const result = await AuroraAPI.launchRealMission(requestBody);
 
-            if (response.ok) {
-                const result = await response.json() as any;
+            if (result && result.scan_id) {
                 const scanId = result.scan_id;
                 
                 // Update active campaign with new scan parameters
