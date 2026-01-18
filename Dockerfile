@@ -60,7 +60,7 @@ while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
     cat /tmp/backend.log
     exit 1
   fi
-  if nc -z localhost 8000 2>/dev/null || wget --quiet --tries=1 http://localhost:8000/health 2>/dev/null; then
+  if nc -z 127.0.0.1 8000 2>/dev/null || wget --quiet --tries=1 http://127.0.0.1:8000/health 2>/dev/null; then
     echo "✅ Backend is listening on port 8000"
     break
   fi
@@ -78,7 +78,7 @@ if [ $ATTEMPT -ge $MAX_ATTEMPTS ]; then
 fi
 
 echo "Starting Express frontend..."
-node server.js
+BACKEND_URL=${BACKEND_URL:-http://127.0.0.1:8000} node server.js
 EOF
 
 RUN chmod +x /app/container-start.sh
