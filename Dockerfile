@@ -2,14 +2,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install Python and dependencies
-RUN apk add --no-cache python3 py3-pip py3-psycopg2
+# Install Python, build tools, and dependencies
+RUN apk add --no-cache python3 py3-pip py3-psycopg2 gcc python3-dev musl-dev linux-headers
 
 # Copy backend requirements
 COPY backend/requirements.txt ./backend/
 
 # Install Python dependencies (use --break-system-packages for Alpine)
 RUN pip3 install --no-cache-dir --break-system-packages -r ./backend/requirements.txt
+
+# Clean up build tools to reduce image size
+RUN apk del gcc python3-dev musl-dev linux-headers
 
 # Copy package files for Node
 COPY package*.json ./
