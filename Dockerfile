@@ -9,7 +9,10 @@ RUN apk add --no-cache python3 py3-pip py3-psycopg2 gcc python3-dev musl-dev lin
 COPY backend/requirements.txt ./backend/
 
 # Install Python dependencies (use --break-system-packages for Alpine)
-RUN pip3 install --no-cache-dir --break-system-packages -r ./backend/requirements.txt
+# Use verbose output and fail on error
+RUN pip3 install --no-cache-dir --break-system-packages --require-hashes=no -r ./backend/requirements.txt && \
+    echo "✓ Python dependencies installed" && \
+    python3 -m pip list | grep -E "sqlalchemy|apscheduler|psutil" || (echo "❌ Missing critical packages!" && exit 1)
 
 # Clean up build tools to reduce image size
 RUN apk del gcc python3-dev musl-dev linux-headers
