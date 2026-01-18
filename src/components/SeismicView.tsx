@@ -154,7 +154,7 @@ const SeismicCanvas: React.FC<{
                 interp = {
                     title: nearHorizon.label,
                     description: `Strong acoustic impedance contrast (Conf: ${(nearHorizon.confidence * 100).toFixed(0)}%).`,
-                    significance: nearHorizon.label.includes('Reservoir') ? 'Primary Target Zone: Porous formation capable of holding fluid.' : 'Regional Seal: Impermeable layer trapping resources below.',
+                    significance: nearHorizon?.label && nearHorizon.label.includes('Reservoir') ? 'Primary Target Zone: Porous formation capable of holding fluid.' : 'Regional Seal: Impermeable layer trapping resources below.',
                     type: 'horizon'
                 };
             }

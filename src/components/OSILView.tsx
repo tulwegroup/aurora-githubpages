@@ -183,7 +183,7 @@ const OSILView: React.FC<OSILViewProps> = ({ campaign }) => {
                                 {pass.tasking_status === 'Scheduled' && <div className="absolute top-0 right-0 bg-emerald-500/20 text-emerald-400 text-[9px] px-2 py-0.5 rounded-bl font-bold">TASKED</div>}
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex items-center space-x-3">
-                                        <div className={`p-2 rounded-lg ${pass.sensor_type.includes('SAR') ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}`}>{pass.sensor_type.includes('SAR') ? <Radar size={18} /> : <Eye size={18} />}</div>
+                                        <div className={`p-2 rounded-lg ${pass?.sensor_type && pass.sensor_type.includes('SAR') ? 'bg-blue-500/10 text-blue-400' : 'bg-emerald-500/10 text-emerald-400'}`}>{pass?.sensor_type && pass.sensor_type.includes('SAR') ? <Radar size={18} /> : <Eye size={18} />}</div>
                                         <div><h4 className="text-sm font-bold text-white">{pass.satellite}</h4><p className="text-[10px] text-slate-500 font-mono">{pass.sensor_type}</p></div>
                                     </div>
                                     <div className="text-right"><p className="text-lg font-bold text-white">{pass.time_to_acquisition}</p><p className="text-[10px] text-slate-500">ETA</p></div>

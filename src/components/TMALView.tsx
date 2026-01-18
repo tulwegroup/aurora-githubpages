@@ -348,7 +348,7 @@ const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
                     />
                     <Bar dataKey="power" name="Signal Power" barSize={30} radius={[0, 4, 4, 0]}>
                        {filteredGravityData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.wavelength.includes('Deep') ? '#8b5cf6' : '#334155'} />
+                          <Cell key={`cell-${index}`} fill={entry?.wavelength && entry.wavelength.includes('Deep') ? '#8b5cf6' : '#334155'} />
                        ))}
                     </Bar>
                  </BarChart>

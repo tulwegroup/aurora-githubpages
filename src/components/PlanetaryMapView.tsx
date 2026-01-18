@@ -25,8 +25,8 @@ const PlanetaryMapView: React.FC<PlanetaryMapViewProps> = ({ campaign }) => {
     }, []);
 
     const filteredDiscoveries = discoveries.filter(d => 
-        d.resourceType.toLowerCase().includes(filter.toLowerCase()) || 
-        d.regionName.toLowerCase().includes(filter.toLowerCase())
+        d?.resourceType?.toLowerCase().includes(filter.toLowerCase()) || 
+        d?.regionName?.toLowerCase().includes(filter.toLowerCase())
     );
 
     return (
@@ -89,7 +89,7 @@ const PlanetaryMapView: React.FC<PlanetaryMapViewProps> = ({ campaign }) => {
                             className={`p-3 rounded-lg border transition-all cursor-pointer group hover:bg-slate-800 ${selectedRecord?.id === record.id ? 'bg-aurora-900/50 border-aurora-500' : 'bg-slate-950 border-slate-800'}`}
                         >
                             <div className="flex justify-between items-start mb-1">
-                                <span className={`text-xs font-bold ${record.resourceType.includes('Gold') ? 'text-yellow-400' : record.resourceType.includes('Lithium') ? 'text-purple-400' : 'text-white'}`}>
+                                <span className={`text-xs font-bold ${record?.resourceType && record.resourceType.includes('Gold') ? 'text-yellow-400' : record?.resourceType && record.resourceType.includes('Lithium') ? 'text-purple-400' : 'text-white'}`}>
                                     {record.resourceType}
                                 </span>
                                 <span className="text-[9px] text-slate-500 font-mono">{new Date(record.timestamp).toLocaleDateString()}</span>
