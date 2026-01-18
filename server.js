@@ -17,36 +17,39 @@ console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 // Wrap startup in async IIFE to allow async operations
 (async () => {
   // Test backend connectivity on startup with retries
+  // This is informational only - don't fail if backend isn't ready yet
   let backendReady = false;
   let attempts = 0;
-  const maxAttempts = 15;
+  const maxAttempts = 20;
   
+  console.log(`\n📡 Attempting to verify backend connectivity...`);
   while (!backendReady && attempts < maxAttempts) {
     try {
       attempts++;
-      console.log(`Checking backend connectivity (attempt ${attempts}/${maxAttempts})...`);
-      const response = await fetch(`${BACKEND_URL}/health`, { timeout: 5000 });
+      const response = await fetch(`${BACKEND_URL}/health`, { 
+        timeout: 2000,
+        signal: AbortSignal.timeout(2000)
+      });
       if (response.ok) {
         console.log(`✅ Backend service is reachable at ${BACKEND_URL}`);
         backendReady = true;
-      } else {
-        console.warn(`⚠️ Backend returned ${response.status} at ${BACKEND_URL}`);
       }
     } catch (err) {
-      console.warn(`⚠️ Attempt ${attempts}/${maxAttempts}: Backend unreachable at ${BACKEND_URL}: ${err.message}`);
+      if (attempts % 5 === 0) {
+        console.log(`⏳ Backend still initializing (attempt ${attempts}/${maxAttempts})...`);
+      }
       if (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retry
+        await new Promise(r => setTimeout(r, 1000));
       }
     }
   }
   
   if (!backendReady) {
-    console.error(`❌ Backend service unreachable after ${maxAttempts} attempts at ${BACKEND_URL}`);
-    console.error(`   Frontend will run, but API calls may fail.`);
-    console.error(`   Check backend logs: tail -f /tmp/backend.log`);
-  } else {
-    console.log(`🚀 All services ready!`);
+    console.warn(`\n⚠️  Backend not responding yet at ${BACKEND_URL}`);
+    console.warn(`   API calls will use the proxy - retries will happen automatically\n`);
   }
+  
+  // Don't block - Express will handle backend connectivity issues with automatic retries
 })();
 
 // Proxy API calls to backend
