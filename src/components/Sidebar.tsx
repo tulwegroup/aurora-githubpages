@@ -25,9 +25,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'portfolio', label: 'Portfolio Command', icon: Briefcase },
     { id: 'osil', label: 'Sensor Integration (OSIL)', icon: Radar },
     { id: 'seismic', label: 'Aurora Seismic (ASS)', icon: Waves },
-    { id: 'harmonization', label: 'Harmonization (USHE)', icon: Layers },
-    { id: 'physics', label: 'Physics-Causal Core', icon: Brain },
-    { id: 'temporal', label: 'Temporal Analytics', icon: Clock },
+    { id: 'ushe', label: 'Harmonization (USHE)', icon: Layers },
+    { id: 'pcfc', label: 'Physics-Causal Core', icon: Brain },
+    { id: 'tmal', label: 'Temporal Analytics', icon: Clock },
+    { id: 'qse', label: 'Quantum Engine (QSE)', icon: Brain },
+    { id: 'twin', label: 'Digital Twin', icon: Layers },
+    { id: 'ietl', label: 'Data Ingestion (IETL)', icon: Radar },
+    { id: 'data', label: 'Data Lake', icon: Layers },
     { id: 'config', label: 'System Config', icon: Settings },
   ];
 
