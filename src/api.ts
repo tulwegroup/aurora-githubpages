@@ -92,16 +92,17 @@ export class AuroraAPI {
   
   static async checkConnectivity(): Promise<ConnectivityResult> {
     const url = this.getBaseUrl();
-    const endpoints = ['/system/status', '/system/health', '/'];
+    const endpoints = ['/system/health', '/health', '/'];
     
     for (const endpoint of endpoints) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout for production proxy
             
             const res = await fetch(`${url}${endpoint}`, { 
                 signal: controller.signal,
-                headers: { 'Accept': 'application/json' }
+                headers: { 'Accept': 'application/json' },
+                cache: 'no-cache'
             });
             clearTimeout(timeoutId);
             
@@ -109,8 +110,9 @@ export class AuroraAPI {
                 try {
                     const data = await res.json();
                     this.serverStatus = data;
+                    console.log(`✅ Backend health check successful: ${endpoint}`, data);
                 } catch (e) {
-                    this.serverStatus = { status: 'OK' }; 
+                    this.serverStatus = { status: 'operational' }; 
                 }
                 
                 return { 
@@ -120,10 +122,12 @@ export class AuroraAPI {
                 };
             }
         } catch (e) {
+            console.warn(`⚠️ Health check failed for endpoint ${endpoint}:`, (e as Error).message);
             continue;
         }
     }
     
+    console.warn(`❌ All backend endpoints unreachable from ${url}`);
     return { status: SystemStatus.OFFLINE, mode: 'Sovereign', message: 'Stack Unreachable' };
   }
 

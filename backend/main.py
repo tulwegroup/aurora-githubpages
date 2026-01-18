@@ -130,10 +130,32 @@ async def shutdown_event():
 @app.get("/health")
 @app.get("/system/health")
 async def health_check():
-    """System health check - lightweight endpoint for load balancer"""
+    """System health check - returns comprehensive status"""
+    db_status = "CONNECTED"
+    try:
+        # Try a simple query to verify DB is accessible
+        db = get_db()
+        db.execute("SELECT 1")
+        db_status = "CONNECTED"
+    except Exception as e:
+        db_status = f"DISCONNECTED: {str(e)[:50]}"
+    
+    gee_status = "INITIALIZED"
+    try:
+        # GEE status from global state
+        if gee_initialized:
+            gee_status = "INITIALIZED"
+        else:
+            gee_status = "INITIALIZING"
+    except Exception as e:
+        gee_status = f"FAILED: {str(e)[:50]}"
+    
     return {
         "status": "operational",
-        "version": "3.1.0"
+        "version": "3.1.0",
+        "database": db_status,
+        "gee": gee_status,
+        "timestamp": time.time()
     }
 
 
