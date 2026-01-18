@@ -70,7 +70,7 @@ const DataLakeView: React.FC = () => {
   const filteredFiles = files.filter(file => 
     (activeBucket === 'Archive' ? true : file.bucket === activeBucket) && 
     (activeBucket === 'Archive' ? file.bucket === 'Archive' : true) &&
-    file.name.toLowerCase().includes(searchTerm.toLowerCase())
+    file?.name?.toLowerCase?.()?.includes(searchTerm?.toLowerCase?.() || '')
   );
 
   const ASCVisualizer = ({ content }: { content: string }) => {

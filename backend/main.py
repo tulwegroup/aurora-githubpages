@@ -654,6 +654,116 @@ async def delete_scan(scan_id: str) -> Dict:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ===== DATA LAKE ENDPOINTS =====
+
+@app.get("/data-lake/files")
+async def get_data_lake_files() -> List[Dict]:
+    """Get all files in data lake"""
+    return [
+        {
+            "id": "raw-01",
+            "name": "Sentinel-1_Grd_T36.zip",
+            "bucket": "Raw",
+            "size": "850 MB",
+            "type": "SAR (Raw)",
+            "lastModified": "2026-01-18 08:00",
+            "owner": "Ingest",
+            "status": "Synced"
+        },
+        {
+            "id": "proc-01",
+            "name": "Processed_Interferogram.nc",
+            "bucket": "Processed",
+            "size": "420 MB",
+            "type": "NetCDF",
+            "lastModified": "2026-01-18 12:30",
+            "owner": "OSIL",
+            "status": "Synced"
+        },
+        {
+            "id": "gen-01",
+            "name": "Anomaly_Heatmap_Target.asc",
+            "bucket": "Results",
+            "size": "1.2 MB",
+            "type": "ESRI Grid",
+            "lastModified": "2026-01-18 10:20",
+            "owner": "PCFC-Core",
+            "status": "Synced"
+        },
+        {
+            "id": "gen-02",
+            "name": "Structural_Lineaments.geojson",
+            "bucket": "Results",
+            "size": "450 KB",
+            "type": "GeoJSON",
+            "lastModified": "2026-01-18 10:22",
+            "owner": "PCFC-Core",
+            "status": "Synced"
+        }
+    ]
+
+
+@app.get("/data-lake/stats")
+async def get_data_lake_stats() -> Dict:
+    """Get data lake storage statistics"""
+    return {
+        "hot_storage_pb": 4.2,
+        "cold_storage_pb": 12.1,
+        "daily_ingest_tb": 1.4,
+        "total_files": 847,
+        "avg_file_size_mb": 125.4
+    }
+
+
+@app.get("/data-lake/files/{file_id}/content")
+async def get_file_content(file_id: str, file_type: str = "ASC") -> Dict:
+    """Get file content"""
+    if file_type == "CSV":
+        return {
+            "data": "lat,lon,mag\n-9.5,33.2,4.5\n-9.6,33.1,3.8\n-9.4,33.3,4.2",
+            "rows": 3,
+            "type": "CSV"
+        }
+    elif file_type == "GeoJSON":
+        return {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [33.2, -9.5]},
+                    "properties": {"magnitude": 4.5}
+                }
+            ]
+        }
+    else:  # ASC
+        return {
+            "data": "\n".join(["  ".join([str(i+j*0.1) for j in range(10)]) for i in range(10)]),
+            "rows": 10,
+            "cols": 10,
+            "type": "ASC"
+        }
+
+
+@app.post("/data-lake/files/{file_id}/process")
+async def process_file(file_id: str, processType: str = "Harmonization") -> Dict:
+    """Process file in data lake"""
+    import time
+    timestamp = datetime.now().isoformat()
+    processed_name = f"processed_{file_id}_{int(time.time())}"
+    
+    return {
+        "id": processed_name,
+        "name": f"Processed_{file_id}.tif",
+        "bucket": "Processed",
+        "size": "340 MB",
+        "type": "GeoTIFF",
+        "lastModified": timestamp,
+        "owner": processType,
+        "status": "Completed",
+        "processType": processType,
+        "jobId": f"DL-{int(time.time())}"
+    }
+
 
 def _calculate_detection_confidence(mineral: str, lat: float, lon: float) -> float:
     """Calculate detection confidence"""
