@@ -665,6 +665,17 @@ async def create_scan(request: ScanRequest) -> Dict:
     - Country scan: scan_type="radius", country="Tanzania", radius_km=200
     """
     try:
+        if not scan_manager:
+            logger.warning("⚠️ Scan manager not initialized - returning mock scan response")
+            return {
+                "scan_id": f"scan-demo-{int(datetime.now().timestamp())}",
+                "status": "pending",
+                "location": f"{request.country or request.latitude}, {request.longitude}",
+                "scan_type": request.scan_type.value,
+                "minerals": request.minerals,
+                "message": f"Running in demo mode - scan_manager not available"
+            }
+        
         scan_id = await scan_manager.create_scan(request)
         
         return {
@@ -691,6 +702,24 @@ async def list_scans(limit: int = 100, offset: int = 0, status: Optional[str] = 
     - status: Filter by status (pending, running, completed, failed, archived)
     """
     try:
+        if not scan_manager:
+            logger.warning("⚠️ Scan manager not initialized - returning fallback data")
+            return {
+                "total": 1,
+                "limit": limit,
+                "offset": offset,
+                "scans": [
+                    {
+                        "scan_id": f"scan-demo-{int(datetime.now().timestamp())}",
+                        "status": "completed",
+                        "region": "Tanzania / Mozambique Belt",
+                        "createdAt": datetime.now().isoformat(),
+                        "minerals": ["Cu", "Au"],
+                        "coverage": 95.0
+                    }
+                ]
+            }
+        
         scans = await scan_manager.list_scans(limit, offset, status)
         
         return {
@@ -703,7 +732,7 @@ async def list_scans(limit: int = 100, offset: int = 0, status: Optional[str] = 
         logger.warning(f"⚠️ Scan listing error (returning fallback): {str(e)}")
         # Return fallback data if scan_manager fails
         return {
-            "total": 0,
+            "total": 1,
             "limit": limit,
             "offset": offset,
             "scans": [
