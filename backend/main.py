@@ -50,10 +50,15 @@ except Exception as e:
     shutdown_scan_scheduler = None
 try:
     from .integrations.gee_fetcher import GEEDataFetcher
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.info("📡 Initializing GEE Data Fetcher...")
     gee_fetcher = GEEDataFetcher()
+    logger_temp.info("✓ GEE Data Fetcher initialized successfully")
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not initialize GEE: {str(e)}")
+    import traceback
+    traceback.print_exc()
     gee_fetcher = None
 
 from .config import settings, Settings
@@ -116,9 +121,14 @@ async def startup_event():
     try:
         if gee_fetcher:
             gee_initialized = True
-            logger.info("✓ GEE initialized")
+            logger.info("✅ GEE initialized and ready")
+        else:
+            logger.warning("⚠️ GEE fetcher not available (failed to initialize during import)")
+            gee_initialized = False
     except Exception as e:
-        logger.warning(f"⚠️ GEE initialization failed: {str(e)}")
+        logger.error(f"❌ GEE initialization failed during startup: {str(e)}")
+        import traceback
+        traceback.print_exc()
         gee_initialized = False
     
     # Initialize background scan scheduler
