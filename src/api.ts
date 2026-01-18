@@ -24,7 +24,7 @@ export class AuroraAPI {
       // Priority 1: Respect localStorage override if user manually set it AND it hasn't failed
       const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
       if (override && override.trim() && !this.overrideFailed) {
-        const trimmedOverride = override.trim().replace(/\/+$/, '');
+        let trimmedOverride = override.trim().replace(/\/+$/, '');
         // Check if this is a localhost URL but we're running on production
         if (typeof window !== 'undefined') {
           const hostname = window.location.hostname;
@@ -36,6 +36,10 @@ export class AuroraAPI {
             this.overrideFailed = true;
             // Fall through to auto-detection
           } else {
+            // On production, append /api if not already there
+            if (isProduction && !trimmedOverride.includes('/api')) {
+              trimmedOverride = trimmedOverride + '/api';
+            }
             console.log(`📍 Using manual backend override: ${trimmedOverride}`);
             return trimmedOverride;
           }
