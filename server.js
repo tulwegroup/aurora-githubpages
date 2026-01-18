@@ -37,6 +37,7 @@ app.use('/api', createProxyMiddleware({
   pathRewrite: {
     '^/api': ''
   },
+  logLevel: 'debug',
   onError: (err, req, res) => {
     console.error(`❌ Proxy error for ${req.path}:`, err.message);
     res.status(503).json({ 
@@ -49,6 +50,11 @@ app.use('/api', createProxyMiddleware({
     proxyRes.headers['X-Proxied-By'] = 'Aurora Frontend';
   }
 }));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', backend: BACKEND_URL, timestamp: new Date().toISOString() });
+});
 
 // Serve static files from dist
 app.use(express.static(path.join(__dirname, 'dist')));
