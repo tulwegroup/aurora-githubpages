@@ -291,9 +291,10 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) =
                   </div>
                   <div className="bg-aurora-800/50 p-2 rounded text-center">
                     <div className="text-2xl font-bold text-orange-400">18.3km²</div>
-                  <div className="text-slate-400">High Value</div>
+                    <div className="text-slate-400">High Value</div>
+                  </div>
                 </div>
-              </div>
+              )}
             </CompactSection>
           </div>
         </div>
