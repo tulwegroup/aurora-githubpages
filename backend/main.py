@@ -22,7 +22,10 @@ from .models import (
     DigitalTwinResponse,
     SatelliteTaskingRequest,
     DetectionTier,
-    VoxelData
+    VoxelData,
+    ScanRequest,
+    ScanMetadata,
+    ScanHistoryResponse
 )
 from .database_manager import get_db
 try:
@@ -31,6 +34,19 @@ except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not import SPECTRAL_LIBRARY: {str(e)}")
     SPECTRAL_LIBRARY = None
+try:
+    from .scan_manager import scan_manager
+except Exception as e:
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"⚠️ Could not import scan_manager: {str(e)}")
+    scan_manager = None
+try:
+    from .scan_worker import initialize_scan_scheduler, shutdown_scan_scheduler
+except Exception as e:
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"⚠️ Could not import scan_worker: {str(e)}")
+    initialize_scan_scheduler = None
+    shutdown_scan_scheduler = None
 try:
     from .integrations.gee_fetcher import GEEDataFetcher
     gee_fetcher = GEEDataFetcher()
@@ -929,9 +945,6 @@ async def _schedule_satellite_acquisition(task_id: str):
 
 
 import asyncio
-from .models import ScanRequest, ScanMetadata, ScanHistoryResponse
-from .scan_manager import scan_manager
-from .scan_worker import initialize_scan_scheduler, shutdown_scan_scheduler
 
 
 if __name__ == "__main__":
