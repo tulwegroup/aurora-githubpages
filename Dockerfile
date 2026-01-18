@@ -37,7 +37,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
 
 # Create startup script with backend startup
-COPY <<EOF /app/container-start.sh
+COPY <<'EOF' /app/container-start.sh
 #!/bin/sh
 set -e
 echo "Starting Aurora OSI services..."
