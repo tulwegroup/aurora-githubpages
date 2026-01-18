@@ -28,6 +28,9 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) =
   });
 
   const [systemHealth, setSystemHealth] = useState<any>(null);
+  const [satelliteData, setSatelliteData] = useState<any>(null);
+  const [mineralDetections, setMineralDetections] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -40,6 +43,33 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) =
     };
     checkHealth();
   }, []);
+
+  const handleFetchSatelliteData = async () => {
+    setIsLoading(true);
+    try {
+      // Example coordinates: Zambia copper belt
+      const data = await AuroraAPI.fetchSatelliteData(-9.5, 27.8);
+      setSatelliteData(data);
+      console.log('✅ Satellite data fetched:', data);
+    } catch (e) {
+      console.error('❌ Failed to fetch satellite data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnalyzeSpectral = async () => {
+    setIsLoading(true);
+    try {
+      const results = await AuroraAPI.analyzeSpectralData(satelliteData);
+      setMineralDetections(results);
+      console.log('✅ Spectral analysis complete:', results);
+    } catch (e) {
+      console.error('❌ Failed to analyze spectral data:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const toggleSection = (section: string) => {
     setExpanded(prev => ({ ...prev, [section]: !prev[section] }));
@@ -128,11 +158,19 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) =
                 <button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-2 rounded font-bold transition-colors">
                   🔄 SYNCHRONIZE
                 </button>
-                <button className="w-full bg-aurora-700 hover:bg-aurora-600 text-white text-xs py-2 rounded font-bold transition-colors">
-                  📡 FETCH SATELLITE DATA
+                <button 
+                  onClick={handleFetchSatelliteData}
+                  disabled={isLoading}
+                  className="w-full bg-aurora-700 hover:bg-aurora-600 disabled:opacity-50 text-white text-xs py-2 rounded font-bold transition-colors"
+                >
+                  {isLoading ? '⏳ FETCHING...' : '📡 FETCH SATELLITE DATA'}
                 </button>
-                <button className="w-full bg-blue-700 hover:bg-blue-600 text-white text-xs py-2 rounded font-bold transition-colors">
-                  🔍 ANALYZE RESULTS
+                <button 
+                  onClick={handleAnalyzeSpectral}
+                  disabled={isLoading || !satelliteData}
+                  className="w-full bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white text-xs py-2 rounded font-bold transition-colors"
+                >
+                  {isLoading ? '⏳ ANALYZING...' : '🔍 ANALYZE RESULTS'}
                 </button>
                 <button className="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs py-2 rounded font-bold transition-colors">
                   💾 EXPORT DATA
@@ -225,21 +263,34 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) =
               icon={<div className="w-3 h-3 bg-green-400 rounded" />}
               defaultOpen={true}
             >
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-aurora-800/50 p-2 rounded text-center">
-                  <div className="text-2xl font-bold text-emerald-400">248</div>
-                  <div className="text-slate-400">Detections</div>
+              {mineralDetections ? (
+                <div className="space-y-2 text-xs">
+                  {mineralDetections.detections && mineralDetections.detections.map((det: any, idx: number) => (
+                    <div key={idx} className="bg-aurora-800/50 p-2 rounded border-l-2 border-orange-400">
+                      <div className="font-bold text-orange-400">{det.mineral}</div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>Confidence: <span className="text-orange-300">{(det.confidence * 100).toFixed(0)}%</span></span>
+                        <span>Area: <span className="text-orange-300">{det.area_km2.toFixed(1)}km²</span></span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="bg-aurora-800/50 p-2 rounded text-center">
-                  <div className="text-2xl font-bold text-blue-400">95.2%</div>
-                  <div className="text-slate-400">Coverage</div>
-                </div>
-                <div className="bg-aurora-800/50 p-2 rounded text-center">
-                  <div className="text-2xl font-bold text-purple-400">0.92</div>
-                  <div className="text-slate-400">Confidence</div>
-                </div>
-                <div className="bg-aurora-800/50 p-2 rounded text-center">
-                  <div className="text-2xl font-bold text-orange-400">18.3km²</div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-aurora-800/50 p-2 rounded text-center">
+                    <div className="text-2xl font-bold text-emerald-400">248</div>
+                    <div className="text-slate-400">Detections</div>
+                  </div>
+                  <div className="bg-aurora-800/50 p-2 rounded text-center">
+                    <div className="text-2xl font-bold text-blue-400">95.2%</div>
+                    <div className="text-slate-400">Coverage</div>
+                  </div>
+                  <div className="bg-aurora-800/50 p-2 rounded text-center">
+                    <div className="text-2xl font-bold text-purple-400">0.92</div>
+                    <div className="text-slate-400">Confidence</div>
+                  </div>
+                  <div className="bg-aurora-800/50 p-2 rounded text-center">
+                    <div className="text-2xl font-bold text-orange-400">18.3km²</div>
                   <div className="text-slate-400">High Value</div>
                 </div>
               </div>

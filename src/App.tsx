@@ -136,7 +136,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     let ViewComponent: any;
     switch (activeTab) {
-      case 'dashboard': ViewComponent = Dashboard; break;
+      case 'dashboard': ViewComponent = CompactDashboard; break;
       case 'map': ViewComponent = PlanetaryMapView; break;
       case 'portfolio': ViewComponent = PortfolioView; break;
       case 'osil': ViewComponent = OSILView; break;
@@ -149,7 +149,7 @@ const App: React.FC = () => {
       case 'ietl': ViewComponent = IETLView; break;
       case 'data': ViewComponent = DataLakeView; break;
       case 'config': ViewComponent = ConfigView; break;
-      default: ViewComponent = Dashboard; break;
+      default: ViewComponent = CompactDashboard; break;
     }
     return (
       <ErrorBoundary>
