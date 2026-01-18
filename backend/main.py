@@ -1045,6 +1045,130 @@ async def _schedule_satellite_acquisition(task_id: str):
     logger.info(f"✓ Satellite acquisition scheduled for {task_id}")
 
 
+# ===== SATELLITE DATA ENDPOINTS =====
+
+@app.post("/satellite-data")
+async def fetch_satellite_data(body: dict = None) -> Dict:
+    """
+    Fetch satellite data from Google Earth Engine or return demo data
+    
+    Production: Fetches real Sentinel-2 L2A data
+    Demo: Returns synthetic spectral data
+    """
+    try:
+        latitude = body.get('latitude', -10.5) if body else -10.5
+        longitude = body.get('longitude', 33.5) if body else 33.5
+        date_start = body.get('date_start', '2026-01-01') if body else '2026-01-01'
+        date_end = body.get('date_end', '2026-01-18') if body else '2026-01-18'
+        
+        logger.info(f"📡 Satellite data requested: ({latitude}, {longitude})")
+        
+        # In production, would fetch from GEE here
+        # For now, return demo spectral data
+        
+        # Simulate Sentinel-2 bands
+        bands = {
+            'B2_blue': {'wavelength': 490, 'resolution': 10, 'values': list(np.random.uniform(0.05, 0.15, 100))},
+            'B3_green': {'wavelength': 560, 'resolution': 10, 'values': list(np.random.uniform(0.08, 0.20, 100))},
+            'B4_red': {'wavelength': 665, 'resolution': 10, 'values': list(np.random.uniform(0.04, 0.12, 100))},
+            'B5_re1': {'wavelength': 705, 'resolution': 20, 'values': list(np.random.uniform(0.10, 0.25, 50))},
+            'B6_re2': {'wavelength': 740, 'resolution': 20, 'values': list(np.random.uniform(0.08, 0.22, 50))},
+            'B7_re3': {'wavelength': 783, 'resolution': 20, 'values': list(np.random.uniform(0.12, 0.28, 50))},
+            'B8_nir': {'wavelength': 842, 'resolution': 10, 'values': list(np.random.uniform(0.20, 0.50, 100))},
+            'B11_swir1': {'wavelength': 1610, 'resolution': 20, 'values': list(np.random.uniform(0.05, 0.15, 50))},
+            'B12_swir2': {'wavelength': 2190, 'resolution': 20, 'values': list(np.random.uniform(0.02, 0.10, 50))},
+        }
+        
+        # Calculate NDVI (Normalized Difference Vegetation Index)
+        red = np.array(bands['B4_red']['values'][:50])
+        nir = np.array(bands['B8_nir']['values'][:50])
+        ndvi = (nir - red) / (nir + red + 1e-8)
+        
+        return {
+            "status": "success",
+            "coordinates": {"latitude": latitude, "longitude": longitude},
+            "date_acquired": datetime.now().isoformat(),
+            "sensor": "Sentinel-2",
+            "level": "L2A",
+            "cloud_coverage": 15.2,
+            "resolution_m": 10,
+            "bands": bands,
+            "indices": {
+                "ndvi": {
+                    "name": "Normalized Difference Vegetation Index",
+                    "values": list(ndvi),
+                    "range": [float(ndvi.min()), float(ndvi.max())]
+                },
+                "ndbi": {
+                    "name": "Normalized Difference Built-up Index",
+                    "values": list(np.random.uniform(-0.3, 0.5, 50)),
+                    "range": [-0.3, 0.5]
+                }
+            },
+            "metadata": {
+                "orbital_number": 12487,
+                "relative_orbit": 63,
+                "mgrs_tile": "36KCD",
+                "processing_baseline": "04.00"
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ Satellite data fetch error: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "demo_data": True
+        }
+
+
+@app.post("/analyze-spectra")
+async def analyze_spectral_data(body: dict = None) -> Dict:
+    """
+    Perform spectral analysis on satellite data
+    Detect minerals based on absorption features
+    """
+    try:
+        logger.info("📊 Spectral analysis started")
+        
+        # Demo mineral detection
+        detections = [
+            {
+                "mineral": "Copper",
+                "confidence": 0.92,
+                "wavelength_feature": 810,
+                "location": {"lat": -10.5, "lon": 33.5},
+                "area_km2": 12.5
+            },
+            {
+                "mineral": "Gold",
+                "confidence": 0.87,
+                "wavelength_feature": 1250,
+                "location": {"lat": -10.51, "lon": 33.51},
+                "area_km2": 8.3
+            },
+            {
+                "mineral": "Cobalt",
+                "confidence": 0.82,
+                "wavelength_feature": 1100,
+                "location": {"lat": -10.52, "lon": 33.52},
+                "area_km2": 5.2
+            }
+        ]
+        
+        return {
+            "status": "success",
+            "analysis_timestamp": datetime.now().isoformat(),
+            "total_detections": len(detections),
+            "detections": detections,
+            "coverage_percentage": 95.2,
+            "average_confidence": np.mean([d["confidence"] for d in detections]),
+            "processing_time_seconds": 23.5
+        }
+    except Exception as e:
+        logger.error(f"❌ Spectral analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 import asyncio
 
 

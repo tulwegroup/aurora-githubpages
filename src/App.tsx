@@ -8,6 +8,7 @@ import { APP_CONFIG } from './config';
 
 // --- LAZY LOAD SUB-SYSTEMS ---
 const Dashboard = lazy(() => import('./components/Dashboard'));
+const CompactDashboard = lazy(() => import('./components/CompactDashboard'));
 const ConfigView = lazy(() => import('./components/ConfigView'));
 const USHEView = lazy(() => import('./components/USHEView'));
 const ScanStatusMonitor = lazy(() => import('./components/ScanStatusMonitor'));
