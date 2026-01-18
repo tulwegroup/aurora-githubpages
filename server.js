@@ -15,53 +15,18 @@ console.log(`🚀 Starting Aurora OSI Frontend Server`);
 console.log(`📍 Port: ${PORT}`);
 console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 
-// Try to read and display backend logs
+// Try to read and display backend logs for diagnostic purposes
 try {
-  const logs = fs.readFileSync('/tmp/backend.log', 'utf8').split('\n').slice(-10);
-  console.log(`\n📋 Last 10 lines of backend log:`);
-  logs.forEach(line => line && console.log(`   ${line}`));
-  console.log('');
+  const logs = fs.readFileSync('/tmp/backend.log', 'utf8').split('\n').slice(-5).filter(line => line.trim());
+  if (logs.length > 0) {
+    console.log(`\n📋 Recent backend log:\n${logs.map(l => '   ' + l).join('\n')}\n`);
+  }
 } catch (e) {
-  console.log('(Backend log not yet available)\n');
+  // Backend logs not available yet
 }
 
-// Wrap startup in async IIFE to allow async operations
-(async () => {
-  // Test backend connectivity on startup with retries
-  // This is informational only - don't fail if backend isn't ready yet
-  let backendReady = false;
-  let attempts = 0;
-  const maxAttempts = 20;
-  
-  console.log(`\n📡 Attempting to verify backend connectivity...`);
-  while (!backendReady && attempts < maxAttempts) {
-    try {
-      attempts++;
-      const response = await fetch(`${BACKEND_URL}/health`, { 
-        timeout: 2000,
-        signal: AbortSignal.timeout(2000)
-      });
-      if (response.ok) {
-        console.log(`✅ Backend service is reachable at ${BACKEND_URL}`);
-        backendReady = true;
-      }
-    } catch (err) {
-      if (attempts % 5 === 0) {
-        console.log(`⏳ Backend still initializing (attempt ${attempts}/${maxAttempts})...`);
-      }
-      if (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 1000));
-      }
-    }
-  }
-  
-  if (!backendReady) {
-    console.warn(`\n⚠️  Backend not responding yet at ${BACKEND_URL}`);
-    console.warn(`   API calls will use the proxy - retries will happen automatically\n`);
-  }
-  
-  // Don't block - Express will handle backend connectivity issues with automatic retries
-})();
+console.log(`\n🔗 Express proxy routing /api → ${BACKEND_URL}`);
+console.log(`📡 Backend connectivity check skipped (proxy will retry automatically)\n`);
 
 // Proxy API calls to backend
 app.use('/api', createProxyMiddleware({
