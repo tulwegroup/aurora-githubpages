@@ -4,13 +4,16 @@
 const ENV = (import.meta as any).env || {};
 
 export const APP_CONFIG = {
-    // Detect environment
+    // Detect environment - in production (Railway), always use /api
     MODE: ENV.MODE || 'production',
     
     API: {
         // In production (Railway): Use /api relative path, server.js proxies to localhost:8000
         // In development: Use localhost:8000 directly
-        BASE_URL: ENV.MODE === 'production' ? '/api' : (ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000'),
+        // Check hostname - if not localhost, use /api proxy
+        BASE_URL: (typeof window !== 'undefined' && !window.location.hostname.includes('localhost')) 
+          ? '/api' 
+          : (ENV.MODE === 'production' ? '/api' : (ENV.VITE_API_URL || ENV.VITE_BACKEND_URL || 'http://localhost:8000')),
         
         // Infrastructure Details
         DB_PROVIDER: 'Neon Serverless Postgres',

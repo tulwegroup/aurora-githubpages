@@ -105,6 +105,11 @@ export class AuroraAPI {
     const url = this.getBaseUrl();
     const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const fullUrl = `${url}${cleanPath}`;
+    
+    // Log the full URL being called (for debugging)
+    if (endpoint.includes('scans') || endpoint.includes('seismic')) {
+      console.log(`📡 API Call: ${fullUrl}`);
+    }
 
     try {
       const controller = new AbortController();
