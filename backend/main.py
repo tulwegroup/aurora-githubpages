@@ -99,12 +99,14 @@ async def startup_event():
     
     # Initialize background scan scheduler
     try:
-        initialize_scan_scheduler()
+        if initialize_scan_scheduler:
+            initialize_scan_scheduler()
+            logger.info("✓ Scan scheduler initialized")
     except Exception as e:
         logger.warning(f"⚠️ Scan scheduler initialization failed: {str(e)}")
     
     # Log startup but don't block on anything
-    logger.info("✓ Backend initialization complete")
+    logger.info("✓ Backend initialization complete - ready to handle requests")
     _startup_complete = True
 
 
@@ -112,7 +114,8 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown"""
     try:
-        shutdown_scan_scheduler()
+        if shutdown_scan_scheduler:
+            shutdown_scan_scheduler()
     except Exception as e:
         logger.warning(f"⚠️ Scan scheduler shutdown error: {str(e)}")
     
