@@ -745,9 +745,10 @@ async def get_file_content(file_id: str, file_type: str = "ASC") -> Dict:
 
 
 @app.post("/data-lake/files/{file_id}/process")
-async def process_file(file_id: str, processType: str = "Harmonization") -> Dict:
+async def process_file(file_id: str, body: Dict) -> Dict:
     """Process file in data lake"""
     import time
+    processType = body.get("processType", "Harmonization")
     timestamp = datetime.now().isoformat()
     processed_name = f"processed_{file_id}_{int(time.time())}"
     
