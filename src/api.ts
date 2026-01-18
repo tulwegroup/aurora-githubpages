@@ -25,14 +25,20 @@ export class AuroraAPI {
       const override = localStorage.getItem(STORAGE_KEYS.BACKEND_OVERRIDE);
       if (override && override.trim() && !this.overrideFailed) {
         let trimmedOverride = override.trim().replace(/\/+$/, '');
-        // Check if this is a localhost URL but we're running on production
-        if (typeof window !== 'undefined') {
+        
+        // Validate override format - must have protocol
+        if (!trimmedOverride.startsWith('http://') && !trimmedOverride.startsWith('https://')) {
+          console.warn(`⚠️ Invalid override format (missing http:// or https://): ${trimmedOverride} - clearing it`);
+          localStorage.removeItem(STORAGE_KEYS.BACKEND_OVERRIDE);
+          // Fall through to auto-detection
+        } else if (typeof window !== 'undefined') {
           const hostname = window.location.hostname;
           const isProduction = !hostname.includes('localhost') && !hostname.includes('127.0.0.1');
           const isLocalhostUrl = trimmedOverride.includes('localhost') || trimmedOverride.includes('127.0.0.1');
           
           if (isProduction && isLocalhostUrl) {
-            console.warn(`⚠️  Manual override (${trimmedOverride}) is for localhost but running on production (${hostname}) - will use auto-detection instead`);
+            console.warn(`⚠️  Manual override (${trimmedOverride}) is for localhost but running on production (${hostname}) - clearing it`);
+            localStorage.removeItem(STORAGE_KEYS.BACKEND_OVERRIDE);
             this.overrideFailed = true;
             // Fall through to auto-detection
           } else {
