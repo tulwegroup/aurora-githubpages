@@ -19,30 +19,33 @@ console.log(`🔗 Backend URL: ${BACKEND_URL}`);
   // Test backend connectivity on startup with retries
   let backendReady = false;
   let attempts = 0;
-  const maxAttempts = 10;
+  const maxAttempts = 15;
   
   while (!backendReady && attempts < maxAttempts) {
     try {
       attempts++;
       console.log(`Checking backend connectivity (attempt ${attempts}/${maxAttempts})...`);
-      const response = await fetch(`${BACKEND_URL}/health`, { timeout: 3000 });
+      const response = await fetch(`${BACKEND_URL}/health`, { timeout: 5000 });
       if (response.ok) {
-        console.log(`✓ Backend service is reachable at ${BACKEND_URL}`);
+        console.log(`✅ Backend service is reachable at ${BACKEND_URL}`);
         backendReady = true;
       } else {
         console.warn(`⚠️ Backend returned ${response.status} at ${BACKEND_URL}`);
       }
     } catch (err) {
-      console.warn(`⚠️ Attempt ${attempts}: Backend unreachable at ${BACKEND_URL}: ${err.message}`);
+      console.warn(`⚠️ Attempt ${attempts}/${maxAttempts}: Backend unreachable at ${BACKEND_URL}: ${err.message}`);
       if (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retry
+        await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retry
       }
     }
   }
   
   if (!backendReady) {
-    console.warn(`⚠️ Backend service unreachable after ${maxAttempts} attempts.`);
-    console.warn(`   Frontend will run, but API calls may fail. Check BACKEND_URL or backend logs.`);
+    console.error(`❌ Backend service unreachable after ${maxAttempts} attempts at ${BACKEND_URL}`);
+    console.error(`   Frontend will run, but API calls may fail.`);
+    console.error(`   Check backend logs: tail -f /tmp/backend.log`);
+  } else {
+    console.log(`🚀 All services ready!`);
   }
 })();
 

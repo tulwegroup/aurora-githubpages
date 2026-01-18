@@ -33,18 +33,25 @@ EXPOSE 3000 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Create startup script
+# Create startup script with better error handling
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
     echo 'echo "Starting Aurora OSI services..."' >> /app/start.sh && \
     echo 'export BACKEND_URL=${BACKEND_URL:-http://localhost:8000}' >> /app/start.sh && \
     echo 'echo "Backend URL: $BACKEND_URL"' >> /app/start.sh && \
-    echo 'python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &' >> /app/start.sh && \
+    echo 'echo "Starting FastAPI backend on port 8000..."' >> /app/start.sh && \
+    echo 'python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --log-level info > /tmp/backend.log 2>&1 &' >> /app/start.sh && \
     echo 'BACKEND_PID=$!' >> /app/start.sh && \
     echo 'echo "Backend PID: $BACKEND_PID"' >> /app/start.sh && \
-    echo 'sleep 2' >> /app/start.sh && \
-    echo 'if ! kill -0 $BACKEND_PID 2>/dev/null; then echo "Backend failed to start!"; cat /tmp/backend.log; exit 1; fi' >> /app/start.sh && \
-    echo 'echo "Backend started successfully"' >> /app/start.sh && \
+    echo 'sleep 3' >> /app/start.sh && \
+    echo 'if ! kill -0 $BACKEND_PID 2>/dev/null; then' >> /app/start.sh && \
+    echo '  echo "❌ Backend failed to start! Showing logs:"' >> /app/start.sh && \
+    echo '  cat /tmp/backend.log' >> /app/start.sh && \
+    echo '  exit 1' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo 'echo "✓ Backend started successfully (PID: $BACKEND_PID)"' >> /app/start.sh && \
+    echo 'sleep 1' >> /app/start.sh && \
+    echo 'echo "Starting Express frontend on port 3000..."' >> /app/start.sh && \
     echo 'node server.js' >> /app/start.sh && \
     chmod +x /app/start.sh
 
