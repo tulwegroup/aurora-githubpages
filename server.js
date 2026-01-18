@@ -16,17 +16,33 @@ console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 
 // Wrap startup in async IIFE to allow async operations
 (async () => {
-  // Test backend connectivity on startup
-  try {
-    const response = await fetch(`${BACKEND_URL}/health`, { timeout: 5000 });
-    if (response.ok) {
-      console.log(`✓ Backend service is reachable at ${BACKEND_URL}`);
-    } else {
-      console.warn(`⚠️ Backend service returned ${response.status}`);
+  // Test backend connectivity on startup with retries
+  let backendReady = false;
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (!backendReady && attempts < maxAttempts) {
+    try {
+      attempts++;
+      console.log(`Checking backend connectivity (attempt ${attempts}/${maxAttempts})...`);
+      const response = await fetch(`${BACKEND_URL}/health`, { timeout: 3000 });
+      if (response.ok) {
+        console.log(`✓ Backend service is reachable at ${BACKEND_URL}`);
+        backendReady = true;
+      } else {
+        console.warn(`⚠️ Backend returned ${response.status} at ${BACKEND_URL}`);
+      }
+    } catch (err) {
+      console.warn(`⚠️ Attempt ${attempts}: Backend unreachable at ${BACKEND_URL}: ${err.message}`);
+      if (attempts < maxAttempts) {
+        await new Promise(r => setTimeout(r, 1000)); // Wait 1 second before retry
+      }
     }
-  } catch (err) {
-    console.warn(`⚠️ Backend service unreachable at ${BACKEND_URL}: ${err.message}`);
-    console.warn(`   Frontend will run, but API calls may fail. Configure BACKEND_URL environment variable.`);
+  }
+  
+  if (!backendReady) {
+    console.warn(`⚠️ Backend service unreachable after ${maxAttempts} attempts.`);
+    console.warn(`   Frontend will run, but API calls may fail. Check BACKEND_URL or backend logs.`);
   }
 })();
 
@@ -38,16 +54,21 @@ app.use('/api', createProxyMiddleware({
     '^/api': ''
   },
   logLevel: 'debug',
+  timeout: 30000,
+  proxyTimeout: 30000,
   onError: (err, req, res) => {
-    console.error(`❌ Proxy error for ${req.path}:`, err.message);
+    console.error(`❌ Proxy error for ${req.method} ${req.path}:`, err.message);
     res.status(503).json({ 
       error: 'Backend service unavailable',
       details: `Could not reach backend at ${BACKEND_URL}`,
-      suggestion: `Set BACKEND_URL environment variable to your backend service URL`
+      hint: `Check if backend is running at ${BACKEND_URL} or set BACKEND_URL environment variable`,
+      originalError: err.message,
+      path: req.path
     });
   },
   onProxyRes: (proxyRes, req, res) => {
     proxyRes.headers['X-Proxied-By'] = 'Aurora Frontend';
+    proxyRes.headers['X-Backend-URL'] = BACKEND_URL;
   }
 }));
 
