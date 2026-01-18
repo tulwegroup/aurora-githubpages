@@ -3,8 +3,6 @@ Aurora OSI v3 - FastAPI Backend
 Multi-physics satellite fusion for planetary-scale subsurface intelligence
 """
 
-print("🔧 [Module Load] Starting backend module initialization...")
-
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,10 +14,7 @@ import logging
 import os
 from pathlib import Path
 
-print("🔧 [Module Load] FastAPI imports complete")
-
 # Use relative imports for backend modules
-print("🔧 [Module Load] Importing models...")
 from .models import (
     MineralDetectionRequest,
     MineralDetectionResult,
@@ -32,51 +27,37 @@ from .models import (
     ScanMetadata,
     ScanHistoryResponse
 )
-print("🔧 [Module Load] Models imported successfully")
-
-print("🔧 [Module Load] Importing database manager...")
 from .database_manager import get_db
-print("🔧 [Module Load] Database manager imported successfully")
 
 try:
-    print("🔧 [Module Load] Importing spectral library...")
     from .database.spectral_library import SPECTRAL_LIBRARY
-    print("🔧 [Module Load] Spectral library imported successfully")
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not import SPECTRAL_LIBRARY: {str(e)}")
     SPECTRAL_LIBRARY = None
 try:
-    print("🔧 [Module Load] Importing scan manager...")
     from .scan_manager import scan_manager
-    print("🔧 [Module Load] Scan manager imported successfully")
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not import scan_manager: {str(e)}")
     scan_manager = None
 try:
-    print("🔧 [Module Load] Importing scan worker...")
     from .scan_worker import initialize_scan_scheduler, shutdown_scan_scheduler
-    print("🔧 [Module Load] Scan worker imported successfully")
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not import scan_worker: {str(e)}")
     initialize_scan_scheduler = None
     shutdown_scan_scheduler = None
 try:
-    print("🔧 [Module Load] Initializing GEE...")
     from .integrations.gee_fetcher import GEEDataFetcher
     gee_fetcher = GEEDataFetcher()
-    print("🔧 [Module Load] GEE initialized successfully")
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not initialize GEE: {str(e)}")
     gee_fetcher = None
 
-print("🔧 [Module Load] Importing config and routers...")
 from .config import settings
 from .routers import system
-print("🔧 [Module Load] Config and routers imported successfully")
 
 # Configure logging for Cloud Run
 log_level = settings.get_log_level()
@@ -87,13 +68,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # FastAPI app
-print("🔧 [Module Load] Creating FastAPI application...")
 app = FastAPI(
     title="Aurora OSI v3",
     description="Planetary-scale Physics-Causal Quantum-Assisted Sovereign Subsurface Intelligence",
     version="3.1.0"
 )
-print("🔧 [Module Load] FastAPI app created successfully")
 
 # CORS configuration
 cors_origins = settings.CORS_ORIGINS

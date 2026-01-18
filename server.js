@@ -14,6 +14,17 @@ console.log(`🚀 Starting Aurora OSI Frontend Server`);
 console.log(`📍 Port: ${PORT}`);
 console.log(`🔗 Backend URL: ${BACKEND_URL}`);
 
+// Try to read and display backend logs
+const fs = require('fs');
+try {
+  const logs = fs.readFileSync('/tmp/backend.log', 'utf8').split('\n').slice(-10);
+  console.log(`\n📋 Last 10 lines of backend log:`);
+  logs.forEach(line => line && console.log(`   ${line}`));
+  console.log('');
+} catch (e) {
+  console.log('(Backend log not yet available)\n');
+}
+
 // Wrap startup in async IIFE to allow async operations
 (async () => {
   // Test backend connectivity on startup with retries
