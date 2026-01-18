@@ -9,6 +9,7 @@ import { APP_CONFIG } from './config';
 // --- LAZY LOAD SUB-SYSTEMS ---
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const CompactDashboard = lazy(() => import('./components/CompactDashboard'));
+const MissionControl = lazy(() => import('./components/MissionControl'));
 const ConfigView = lazy(() => import('./components/ConfigView'));
 const USHEView = lazy(() => import('./components/USHEView'));
 const ScanStatusMonitor = lazy(() => import('./components/ScanStatusMonitor'));
@@ -137,6 +138,7 @@ const App: React.FC = () => {
     let ViewComponent: any;
     switch (activeTab) {
       case 'dashboard': ViewComponent = CompactDashboard; break;
+      case 'mission': ViewComponent = MissionControl; break;
       case 'map': ViewComponent = PlanetaryMapView; break;
       case 'portfolio': ViewComponent = PortfolioView; break;
       case 'osil': ViewComponent = OSILView; break;
@@ -149,7 +151,7 @@ const App: React.FC = () => {
       case 'ietl': ViewComponent = IETLView; break;
       case 'data': ViewComponent = DataLakeView; break;
       case 'config': ViewComponent = ConfigView; break;
-      default: ViewComponent = CompactDashboard; break;
+      default: ViewComponent = MissionControl; break;
     }
     return (
       <ErrorBoundary>
@@ -181,9 +183,9 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-aurora-950 font-sans text-slate-200 selection:bg-aurora-500/30">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} customLogo={customLogo} onSwitchCampaign={handleSwitch} />
-      <main className="ml-64 flex-1 flex flex-col">
-        <header className="h-16 border-b border-aurora-800 bg-aurora-950/80 backdrop-blur-md sticky top-0 z-40 px-8 flex items-center justify-between">
-          <div className="relative w-96 font-mono text-xs text-slate-500">SYSTEM_OPERATIONAL // SECURE_CLOUD_ACTIVE</div>
+      <main className="ml-56 flex-1 flex flex-col">
+        <header className="h-16 border-b border-aurora-800 bg-aurora-950/80 backdrop-blur-md sticky top-0 z-40 px-6 flex items-center justify-between">
+          <div className="relative font-mono text-xs text-slate-500">SYSTEM_OPERATIONAL // SECURE_CLOUD_ACTIVE</div>
           <div className="flex items-center space-x-6">
             <div className="text-right">
                 <p className="text-sm font-medium text-white">{campaign.regionName || campaign.targetCoordinates}</p>
@@ -192,7 +194,7 @@ const App: React.FC = () => {
             <div className="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center border border-aurora-700 shadow-inner"><User size={16} className="text-slate-400" /></div>
           </div>
         </header>
-        <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">{renderContent()}</div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">{renderContent()}</div>
       </main>
     </div>
   );

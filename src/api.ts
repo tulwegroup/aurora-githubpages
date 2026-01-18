@@ -645,4 +645,94 @@ export class AuroraAPI {
       };
     }
   }
+
+  // Workflow API Methods - NO MOCK DATA
+  static async runPINNAnalysis(lat: number, lon: number, satelliteData?: any): Promise<any> {
+    try {
+      return await this.apiFetch('/pinn/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ latitude: lat, longitude: lon, satellite_data: satelliteData })
+      });
+    } catch (e) {
+      return { error: 'PINN analysis failed - real data or processing unavailable', code: 'PINN_ERROR' };
+    }
+  }
+
+  static async runUSHEAnalysis(spectralData: any): Promise<any> {
+    try {
+      return await this.apiFetch('/ushe/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ spectral_data: spectralData })
+      });
+    } catch (e) {
+      return { error: 'USHE harmonization failed - real data unavailable', code: 'USHE_ERROR' };
+    }
+  }
+
+  static async runTMALAnalysis(lat: number, lon: number): Promise<any> {
+    try {
+      return await this.apiFetch('/tmal/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ latitude: lat, longitude: lon })
+      });
+    } catch (e) {
+      return { error: 'TMAL temporal analysis failed - real data unavailable', code: 'TMAL_ERROR' };
+    }
+  }
+
+  static async generateVisualizations(analysisData: {
+    satellite?: any;
+    spectral?: any;
+    pinn?: any;
+    ushe?: any;
+    tmal?: any;
+  }): Promise<any> {
+    try {
+      return await this.apiFetch('/visualizations/generate', {
+        method: 'POST',
+        body: JSON.stringify(analysisData)
+      });
+    } catch (e) {
+      return { error: 'Visualization generation failed', code: 'VIZ_ERROR' };
+    }
+  }
+
+  static async storeScanResults(scanData: any): Promise<any> {
+    try {
+      return await this.apiFetch('/scans/store', {
+        method: 'POST',
+        body: JSON.stringify(scanData)
+      });
+    } catch (e) {
+      return { error: 'Failed to store scan results in database', code: 'STORAGE_ERROR' };
+    }
+  }
+
+  static async getAllScans(): Promise<any[]> {
+    try {
+      return await this.apiFetch('/scans/history');
+    } catch (e) {
+      console.error('Failed to fetch scan history:', e);
+      return [];
+    }
+  }
+
+  static async getScanDetails(scanId: string): Promise<any> {
+    try {
+      return await this.apiFetch(`/scans/${scanId}/details`);
+    } catch (e) {
+      return { error: 'Scan details not found', code: 'NOT_FOUND' };
+    }
+  }
+
+  static async fetchRealSpectralData(aoi: any, mineral?: string): Promise<any> {
+    try {
+      return await this.apiFetch('/spectral/real', {
+        method: 'POST',
+        body: JSON.stringify({ aoi, target_mineral: mineral })
+      });
+    } catch (e) {
+      return { error: 'Real spectral data unavailable', code: 'NO_DATA' };
+    }
+  }
 }
