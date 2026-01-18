@@ -36,7 +36,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState { return { hasError: true, error }; }
   
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) { console.error("Critical Failure:", error, errorInfo); }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) { 
+    console.error("❌ CRITICAL ERROR IN UI:", error.message);
+    console.error("Component Stack:", errorInfo.componentStack);
+    console.error("Full Error:", error);
+  }
   
   // Fix: Explicitly cast this to any to access setState in arrow function property
   handleReload = () => { 
@@ -50,6 +54,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
         <div className="flex flex-col items-center justify-center h-full text-slate-400 p-8 text-center bg-aurora-950/50 rounded-xl border border-aurora-800 animate-fadeIn">
           <AlertTriangle size={48} className="text-red-500 mb-6" />
           <h2 className="text-2xl font-bold text-white mb-2">Interface Malfunction</h2>
+          {this.state.error && (
+            <div className="bg-red-900/20 border border-red-500/30 rounded p-3 mb-4 text-left max-w-md">
+              <p className="text-xs text-red-400 font-mono">{this.state.error.message}</p>
+            </div>
+          )}
           <button onClick={this.handleReload} className="bg-aurora-600 hover:bg-aurora-500 text-white px-8 py-3 rounded-lg font-bold flex items-center transition-all">
             <RefreshCw size={18} className="mr-2" /> Reboot
           </button>
