@@ -7,6 +7,7 @@ import { CausalNode, ExplorationCampaign } from '../types';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { GitBranch, Brain, AlertOctagon, Info, ArrowUpRight, Play, Share2, Droplet, Eye, Sparkles, AlertTriangle, CheckCircle, Layers, Activity, Lightbulb, HelpCircle } from 'lucide-react';
 import { AuroraAPI } from '../api';
+import ScrollNavigation from './ScrollNavigation';
 
 interface PCFCViewProps {
   campaign: ExplorationCampaign;
@@ -249,6 +250,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
 
   return (
     <div className="space-y-6 h-full">
+      <ScrollNavigation sections={['causal-section', 'tomography-section', 'seepage-section']} />
       
       {/* Navigation */}
       <div className="flex space-x-2 bg-aurora-900/30 p-1 rounded-lg w-fit border border-aurora-800">
@@ -258,7 +260,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
-      <div className="lg:col-span-2 bg-aurora-950 border border-aurora-800 rounded-xl flex flex-col min-h-[500px]">
+      <div id="causal-section" className="lg:col-span-2 bg-aurora-950 border border-aurora-800 rounded-xl flex flex-col min-h-[500px]">
         
         {activeTab === 'causal' ? (
            <>
@@ -301,7 +303,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
            </>
         ) : activeTab === 'seepage' ? (
            <>
-              <div className="px-6 py-4 border-b border-aurora-800 flex justify-between items-center bg-aurora-900/30">
+              <div id="seepage-section" className="px-6 py-4 border-b border-aurora-800 flex justify-between items-center bg-aurora-900/30">
                  <div className="flex items-center space-x-2"><Droplet className="text-blue-500" size={20} /><h2 className="font-semibold text-slate-200">Probabilistic Seepage Network (PSN)</h2></div>
                  <span className="text-xs text-slate-500 font-mono">FLOW DIRECTION: SOURCE ΓåÆ SEEP</span>
               </div>
@@ -337,7 +339,7 @@ const PCFCView: React.FC<PCFCViewProps> = ({ campaign }) => {
            </>
         ) : (
            <>
-              <div className="px-6 py-4 border-b border-aurora-800 flex justify-between items-center bg-aurora-900/30">
+              <div id="tomography-section" className="px-6 py-4 border-b border-aurora-800 flex justify-between items-center bg-aurora-900/30">
                <div className="flex items-center space-x-2"><Eye className="text-aurora-500" size={20} /><h2 className="font-semibold text-slate-200">Live Subsurface Tomography (PINN Output)</h2></div>
                <button onClick={startTomography} disabled={isResolving} className="text-xs bg-aurora-600 hover:bg-aurora-500 px-3 py-1 rounded text-white flex items-center disabled:opacity-50"><Play size={12} className="mr-1" /> {isResolving ? 'Calculating...' : 'Run Simulation'}</button>
             </div>
