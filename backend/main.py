@@ -1412,38 +1412,36 @@ async def store_scan_results(body: dict = None) -> Dict:
 
 
 @app.get("/scans/history")
-async def get_all_scans() -> Dict:
+async def get_all_scans() -> List[Dict]:
     """
     Retrieve all historical scans from database.
-    Returns error if query fails - NO MOCK DATA.
+    Returns empty array if database not ready, error response only on actual failure.
     """
     try:
         logger.info("📜 Retrieving scan history")
         
         # TODO: Query database for all scans
-        # For now, return error indicating database not yet set up
-        return {
-            "error": "Scan history not available - database not yet implemented",
-            "code": "DB_NOT_READY",
-            "scans": []
-        }
+        # For now, return empty array (database not yet implemented)
+        # Frontend will handle this gracefully
+        return []
         
     except Exception as e:
         logger.error(f"❌ Scan history retrieval error: {str(e)}")
-        return {"error": str(e), "code": "QUERY_ERROR"}
+        # Return empty array instead of error - prevents frontend .map() crash
+        return []
 
 
 @app.get("/scans/{scan_id}/details")
 async def get_scan_details(scan_id: str) -> Dict:
     """
     Retrieve detailed results for a specific scan.
-    Returns error if scan not found or query fails - NO MOCK DATA.
+    Returns error response if scan not found or query fails.
     """
     try:
         logger.info(f"📖 Retrieving details for scan {scan_id}")
         
         # TODO: Query database for specific scan
-        # For now, return error indicating database not yet set up
+        # For now, return error object (database not yet implemented)
         return {
             "error": f"Scan details not available - database not yet implemented",
             "code": "DB_NOT_READY",

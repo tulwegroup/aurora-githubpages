@@ -706,7 +706,17 @@ export class AuroraAPI {
 
   static async getAllScans(): Promise<any[]> {
     try {
-      return await this.apiFetch('/scans/history');
+      const response = await this.apiFetch('/scans/history');
+      // Handle both array response and object response with scans property
+      if (Array.isArray(response)) {
+        return response;
+      } else if (response && Array.isArray(response.scans)) {
+        return response.scans;
+      } else if (response && response.error) {
+        console.warn('Scan history error:', response.error);
+        return [];
+      }
+      return [];
     } catch (e) {
       console.error('Failed to fetch scan history:', e);
       return [];

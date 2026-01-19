@@ -38,9 +38,16 @@ const MissionControl: React.FC = () => {
   const loadHistoricalScans = async () => {
     try {
       const scans = await AuroraAPI.getAllScans();
-      setHistoricalScans(scans || []);
+      // Ensure scans is always an array
+      if (Array.isArray(scans)) {
+        setHistoricalScans(scans);
+      } else {
+        console.warn('Historical scans not in expected format:', scans);
+        setHistoricalScans([]);
+      }
     } catch (e) {
       console.error('Failed to load historical scans:', e);
+      setHistoricalScans([]);
     }
   };
 
