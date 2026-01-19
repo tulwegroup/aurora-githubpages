@@ -320,10 +320,6 @@ export class AuroraAPI {
     return [];
   }
 
-  static async fetchRealSpectralData(aoi: { lat: number, lon: number, radius_km: number }, target: string): Promise<any> {
-    return this.apiFetch(`/gee/spectral?lat=${aoi.lat}&lon=${aoi.lon}&radius=${aoi.radius_km}&target=${target}`);
-  }
-
   static async generateAndSaveReport(campaign: ExplorationCampaign): Promise<IntelReport> {
     // In Sovereign mode, generate a local report
     // In connected mode, would fetch from /scans/{id}/report

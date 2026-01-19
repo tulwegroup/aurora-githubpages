@@ -1,6 +1,6 @@
 
 
-export type AppView = 'dashboard' | 'map' | 'portfolio' | 'osil' | 'seismic' | 'ushe' | 'pcfc' | 'tmal' | 'qse' | 'twin' | 'ietl' | 'data' | 'config';
+export type AppView = 'dashboard' | 'mission' | 'map' | 'portfolio' | 'osil' | 'seismic' | 'ushe' | 'pcfc' | 'tmal' | 'qse' | 'twin' | 'ietl' | 'data' | 'config';
 
 export type MineralAgentType = 'Au' | 'Li' | 'Cx';
 
