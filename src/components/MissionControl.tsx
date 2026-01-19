@@ -26,12 +26,13 @@ interface ActiveScan {
 
 interface MissionControlProps {
   onSetActiveScanLocation?: (lat: number, lon: number, name: string) => void;
+  onSaveCompleteScanReport?: (scanName: string, lat: number, lon: number, componentReports?: any[]) => void;
   scrollToBottom?: () => void;
   scrollToTop?: () => void;
   activeScanLocation?: { lat: number; lon: number; name: string } | null;
 }
 
-const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation, scrollToBottom, scrollToTop, activeScanLocation }) => {
+const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation, onSaveCompleteScanReport, scrollToBottom, scrollToTop, activeScanLocation }) => {
   const [activeScan, setActiveScan] = useState<ActiveScan | null>(null);
   const [latitude, setLatitude] = useState<string>('-9.5');
   const [longitude, setLongitude] = useState<string>('27.8');
@@ -42,6 +43,7 @@ const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation
   const [isPaused, setIsPaused] = useState(false);
   const [historicalScans, setHistoricalScans] = useState<any[]>([]);
   const [showResultsDetails, setShowResultsDetails] = useState(false);
+  const [lastAnalysisResults, setLastAnalysisResults] = useState<any>(null);
 
   // Get unique categories from mineral database
   const mineralCategories = React.useMemo(() => {
@@ -218,6 +220,65 @@ const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation
       }
       updateStep(scan.id, 'database-store', 'completed', 100);
       updateOverallProgress(scan.id);
+
+      // Generate and save component reports
+      const componentReports = [
+        {
+          component: 'PINN',
+          timestamp: new Date().toISOString(),
+          status: pinnResults?.error ? 'failed' : 'success',
+          evidence: pinnResults || {},
+          summary: pinnResults?.error ? 'PINN processing failed' : 'Physical-informed neural network analysis completed',
+          metrics: pinnResults?.metrics || {}
+        },
+        {
+          component: 'USHE',
+          timestamp: new Date().toISOString(),
+          status: usheResults?.error ? 'failed' : 'success',
+          evidence: usheResults || {},
+          summary: usheResults?.error ? 'USHE harmonization failed' : 'Spectral harmonization and enhancement completed',
+          metrics: usheResults?.metrics || {}
+        },
+        {
+          component: 'TMAL',
+          timestamp: new Date().toISOString(),
+          status: tmalResults?.error ? 'failed' : 'success',
+          evidence: tmalResults || {},
+          summary: tmalResults?.error ? 'TMAL analysis failed' : 'Temporal and mineral analytics completed',
+          metrics: tmalResults?.metrics || {}
+        },
+        {
+          component: 'Spectral',
+          timestamp: new Date().toISOString(),
+          status: spectralResults?.error ? 'failed' : 'success',
+          evidence: spectralResults || {},
+          summary: spectralResults?.error ? 'Spectral analysis failed' : 'Satellite spectral data analysis completed',
+          metrics: spectralResults?.metrics || {}
+        },
+        {
+          component: 'Satellite',
+          timestamp: new Date().toISOString(),
+          status: satelliteData?.error ? 'failed' : 'success',
+          evidence: satelliteData || {},
+          summary: satelliteData?.error ? 'Satellite data fetch failed' : 'Satellite imagery acquisition completed',
+          metrics: satelliteData?.metrics || {}
+        }
+      ];
+
+      // Save to scan history/reports
+      if (onSaveCompleteScanReport) {
+        onSaveCompleteScanReport(scan.name, scan.latitude, scan.longitude, componentReports);
+      }
+
+      // Store analysis results for display
+      setLastAnalysisResults({
+        scanId: scan.id,
+        scanName: scan.name,
+        latitude: scan.latitude,
+        longitude: scan.longitude,
+        components: componentReports,
+        timestamp: new Date().toISOString()
+      });
 
       // Workflow complete
       setIsRunning(false);

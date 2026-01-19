@@ -1,6 +1,6 @@
 
 
-export type AppView = 'dashboard' | 'mission' | 'map' | 'portfolio' | 'osil' | 'seismic' | 'ushe' | 'pcfc' | 'tmal' | 'qse' | 'twin' | 'ietl' | 'data' | 'config';
+export type AppView = 'dashboard' | 'mission' | 'map' | 'portfolio' | 'osil' | 'seismic' | 'ushe' | 'pcfc' | 'tmal' | 'qse' | 'twin' | 'ietl' | 'data' | 'reports' | 'config';
 
 export type MineralAgentType = 'Au' | 'Li' | 'Cx';
 
@@ -398,4 +398,40 @@ export interface DeliverableArtifact {
     name: string;
     type: string;
     url: string;
+}
+
+// Scan Reports Repository
+export interface ComponentReport {
+    component: 'PINN' | 'USHE' | 'QSE' | 'TAML' | 'SEEPAGE' | 'LATENT' | 'PCFC' | 'OSIL' | 'IETL' | 'TWIN';
+    timestamp: string;
+    status: 'success' | 'failed' | 'pending';
+    evidence: Record<string, any>;
+    summary: string;
+    metrics?: Record<string, number | string>;
+}
+
+export interface ScanReport {
+    id: string;
+    scanName: string;
+    timestamp: string;
+    coordinates: {
+        lat: number;
+        lon: number;
+    };
+    campaigns?: string[];
+    componentReports: ComponentReport[];
+    summary: string;
+    totalAnalysisTime?: number;
+    keyFindings?: string[];
+    investorPackage?: {
+        generatedAt: string;
+        formatVersion: string;
+    };
+}
+
+export interface ScanHistory {
+    activeScanId: string | null;
+    activeScanLocation: { lat: number; lon: number; name: string } | null;
+    scans: ScanReport[];
+    lastUpdated: string;
 }

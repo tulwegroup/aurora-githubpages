@@ -1,7 +1,7 @@
 import React, { Component, useState, useEffect, Suspense, lazy, ErrorInfo, ReactNode } from 'react';
 import Sidebar from './components/Sidebar';
 import { Bell, Search, User, ShieldCheck, Server, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
-import { ExplorationCampaign, CAMPAIGN_PHASES, AppView, HiveMindState, MineralAgentType } from './types';
+import { ExplorationCampaign, CAMPAIGN_PHASES, AppView, HiveMindState, MineralAgentType, ScanHistory } from './types';
 import { ACTIVE_CAMPAIGN } from './constants';
 import { AuroraAPI } from './api';
 import { APP_CONFIG } from './config';
@@ -22,7 +22,8 @@ const DataLakeView = lazy(() => import('./components/DataLakeView'));
 const DigitalTwinView = lazy(() => import('./components/DigitalTwinView'));
 const PortfolioView = lazy(() => import('./components/PortfolioView'));
 const SeismicView = lazy(() => import('./components/SeismicView'));
-const PlanetaryMapView = lazy(() => import('./components/PlanetaryMapView')); 
+const PlanetaryMapView = lazy(() => import('./components/PlanetaryMapView'));
+const ReportsView = lazy(() => import('./components/ReportsView')); 
 
 interface ErrorBoundaryProps { children?: ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
@@ -88,7 +89,54 @@ const App: React.FC = () => {
   const [bootStep, setBootStep] = useState('Initializing Secure Enclave...');
   const [hiveMind, setHiveMind] = useState<HiveMindState>({ isScanning: false, scanGrid: [], activeAgents: ['Au'], logs: [], progress: 0, hits: 0, misses: 0 });
   const [activeScanLocation, setActiveScanLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
+  const [scanHistory, setScanHistory] = useState<ScanHistory>({ activeScanId: null, activeScanLocation: null, scans: [], lastUpdated: new Date().toISOString() });
   const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // ============= LOCALSTORAGE PERSISTENCE =============
+  const STORAGE_KEY = 'aurora_scan_history';
+  
+  const loadScanHistory = (): ScanHistory => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : { activeScanId: null, activeScanLocation: null, scans: [], lastUpdated: new Date().toISOString() };
+    } catch (e) {
+      console.error('Failed to load scan history:', e);
+      return { activeScanId: null, activeScanLocation: null, scans: [], lastUpdated: new Date().toISOString() };
+    }
+  };
+
+  const saveScanHistory = (history: ScanHistory) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch (e) {
+      console.error('Failed to save scan history:', e);
+    }
+  };
+
+  const saveCompleteScanReport = (scanName: string, lat: number, lon: number, componentReports: any[] = []) => {
+    const newReport: any = {
+      id: `scan_${Date.now()}`,
+      scanName,
+      timestamp: new Date().toISOString(),
+      coordinates: { lat, lon },
+      componentReports: componentReports || [],
+      summary: `Scan of ${scanName} at coordinates (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`
+    };
+
+    const updatedHistory: ScanHistory = {
+      ...scanHistory,
+      activeScanId: newReport.id,
+      activeScanLocation: { lat, lon, name: scanName },
+      scans: [newReport, ...scanHistory.scans],
+      lastUpdated: new Date().toISOString()
+    };
+
+    setScanHistory(updatedHistory);
+    saveScanHistory(updatedHistory);
+    setActiveScanLocation({ lat, lon, name: scanName });
+
+    return newReport.id;
+  };
 
   useEffect(() => {
     const bootSystem = async () => {
@@ -97,6 +145,12 @@ const App: React.FC = () => {
        setBootStep('Connecting to Mission Database...');
        const active = await AuroraAPI.getActiveCampaign();
        setCampaign(active);
+       setBootStep('Restoring Scan Repository...');
+       const history = loadScanHistory();
+       setScanHistory(history);
+       if (history.activeScanLocation) {
+         setActiveScanLocation(history.activeScanLocation);
+       }
        setBootStep('Verifying Subsystem Integrity...');
        await new Promise(r => setTimeout(r, 600)); 
        setIsBooting(false);
@@ -137,7 +191,17 @@ const App: React.FC = () => {
   };
 
   const handleSetActiveScanLocation = (lat: number, lon: number, name: string) => {
-    setActiveScanLocation({ lat, lon, name });
+    const newLocation = { lat, lon, name };
+    setActiveScanLocation(newLocation);
+    
+    // Persist to local storage
+    const updatedHistory: ScanHistory = {
+      ...scanHistory,
+      activeScanLocation: newLocation,
+      lastUpdated: new Date().toISOString()
+    };
+    setScanHistory(updatedHistory);
+    saveScanHistory(updatedHistory);
   };
 
   const scrollToTop = () => {
@@ -169,6 +233,7 @@ const App: React.FC = () => {
       case 'ietl': ViewComponent = IETLView; break;
       case 'data': ViewComponent = DataLakeView; break;
       case 'config': ViewComponent = ConfigView; break;
+      case 'reports': ViewComponent = ReportsView; break;
       default: ViewComponent = MissionControl; break;
     }
     return (
@@ -187,6 +252,8 @@ const App: React.FC = () => {
             onSetActiveScanLocation={handleSetActiveScanLocation}
             scrollToTop={scrollToTop}
             scrollToBottom={scrollToBottom}
+            scanHistory={scanHistory}
+            onSaveCompleteScanReport={saveCompleteScanReport}
           />
         </Suspense>
       </ErrorBoundary>

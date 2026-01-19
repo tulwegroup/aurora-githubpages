@@ -1,6 +1,6 @@
 import React from 'react';
 import { AppView } from '../types';
-import { ChevronRight, Radio, Globe, Briefcase, Radar, Waves, Layers, Brain, Clock, Settings, Zap } from 'lucide-react';
+import { ChevronRight, Radio, Globe, Briefcase, Radar, Waves, Layers, Brain, Clock, Settings, Zap, Archive } from 'lucide-react';
 
 export interface SidebarProps {
   currentView?: string;
@@ -33,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'twin', label: 'Digital Twin', icon: Layers },
     { id: 'ietl', label: 'Data Ingestion (IETL)', icon: Radar },
     { id: 'data', label: 'Data Lake', icon: Layers },
+    { id: 'reports', label: 'Scan Reports', icon: Archive, color: 'text-amber-400' },
     { id: 'config', label: 'System Config', icon: Settings },
   ];
 
