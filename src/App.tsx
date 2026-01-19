@@ -210,8 +210,17 @@ const App: React.FC = () => {
           <div className="relative font-mono text-xs text-slate-500">SYSTEM_OPERATIONAL // SECURE_CLOUD_ACTIVE</div>
           <div className="flex items-center space-x-6">
             <div className="text-right">
-                <p className="text-sm font-medium text-white">{campaign.regionName || campaign.targetCoordinates}</p>
-                <p className="text-[10px] text-aurora-500 font-bold uppercase tracking-widest">{campaign.status}</p>
+                {activeScanLocation ? (
+                  <>
+                    <p className="text-sm font-medium text-white">{activeScanLocation.name}</p>
+                    <p className="text-[10px] text-aurora-500 font-bold uppercase tracking-widest">ACTIVE SCAN • {activeScanLocation.lat.toFixed(2)}°, {activeScanLocation.lon.toFixed(2)}°</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium text-white">{campaign.regionName || campaign.targetCoordinates}</p>
+                    <p className="text-[10px] text-aurora-500 font-bold uppercase tracking-widest">{campaign.status}</p>
+                  </>
+                )}
             </div>
             <div className="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center border border-aurora-700 shadow-inner"><User size={16} className="text-slate-400" /></div>
           </div>

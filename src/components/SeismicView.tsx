@@ -6,6 +6,7 @@ import { Waves, Play, Activity, Layers, Box, Download, AlertCircle, CheckCircle2
 
 interface SeismicViewProps {
     campaign: ExplorationCampaign;
+    activeScanLocation?: { lat: number; lon: number; name: string } | null;
 }
 
 interface Interpretation {

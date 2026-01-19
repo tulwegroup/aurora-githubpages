@@ -7,9 +7,10 @@ import { Database, Map, Search, Sliders, ChevronRight } from 'lucide-react';
 
 interface PlanetaryMapViewProps {
     campaign: ExplorationCampaign;
+    activeScanLocation?: { lat: number; lon: number; name: string } | null;
 }
 
-const PlanetaryMapView: React.FC<PlanetaryMapViewProps> = ({ campaign }) => {
+const PlanetaryMapView: React.FC<PlanetaryMapViewProps> = ({ campaign, activeScanLocation }) => {
     const [discoveries, setDiscoveries] = useState<DiscoveryRecord[]>([]);
     const [filter, setFilter] = useState('');
     const [selectedRecord, setSelectedRecord] = useState<DiscoveryRecord | null>(null);
@@ -35,7 +36,7 @@ const PlanetaryMapView: React.FC<PlanetaryMapViewProps> = ({ campaign }) => {
             <div className="flex-1 bg-aurora-950 border border-aurora-800 rounded-xl overflow-hidden relative shadow-2xl flex flex-col">
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-slate-900/90 backdrop-blur border border-aurora-500/50 px-4 py-2 rounded-full text-white font-bold shadow-lg flex items-center">
                     <Map size={16} className="mr-2 text-emerald-400" />
-                    PLANETARY SURVEILLANCE LAYER
+                    {activeScanLocation ? activeScanLocation.name : 'PLANETARY SURVEILLANCE LAYER'}
                 </div>
                 <MapVisualization 
                     anomalies={[]} 
@@ -43,10 +44,10 @@ const PlanetaryMapView: React.FC<PlanetaryMapViewProps> = ({ campaign }) => {
                     selectedAnomaly={null} 
                     className="w-full h-full"
                     showHistory={true}
-                    historyData={filteredDiscoveries} // Explicitly pass filtered data
-                    autoFit={true} // Auto-zoom to show all results
+                    historyData={filteredDiscoveries}
+                    autoFit={true}
                     scanRadius={500} 
-                    centerCoordinates={campaign.targetCoordinates} 
+                    centerCoordinates={activeScanLocation ? `${activeScanLocation.lat},${activeScanLocation.lon}` : campaign.targetCoordinates} 
                 />
             </div>
 

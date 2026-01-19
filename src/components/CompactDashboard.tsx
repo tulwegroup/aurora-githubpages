@@ -190,7 +190,7 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children, act
               <div className="space-y-2 max-h-40 overflow-y-auto text-xs">
                 <div className="bg-aurora-800/50 p-2 rounded border border-aurora-700">
                   <div className="flex justify-between mb-1">
-                    <span className="font-bold text-blue-400">Tanzania Belt</span>
+                    <span className="font-bold text-blue-400">{activeScanLocation?.name || 'Tanzania Belt'}</span>
                     <span className="text-emerald-400">✓</span>
                   </div>
                   <div className="text-slate-400">Minerals: Cu, Au, Co</div>
