@@ -98,6 +98,15 @@ try:
     logger_temp.info("✓ GEE Data Fetcher initialized successfully")
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"⚠️ Could not import GEE Data Fetcher: {str(e)}")
+    gee_fetcher = None
+
+try:
+    from .integrations.gee_integration import GEEIntegration, initialize_gee, fetch_satellite_data, fetch_elevation_data
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.info("✓ GEE Integration module imported successfully")
+except Exception as e:
+    logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not initialize GEE: {str(e)}")
     import traceback
     traceback.print_exc()
@@ -1549,6 +1558,230 @@ async def get_scan_details(scan_id: str) -> Dict:
     except Exception as e:
         logger.error(f"❌ Scan details retrieval error: {str(e)}")
         return {"error": str(e), "code": "QUERY_ERROR"}
+
+
+# ================================================================
+# GOOGLE EARTH ENGINE (GEE) SATELLITE DATA INTEGRATION
+# ================================================================
+
+@app.post("/gee/initialize")
+async def init_gee_auth(body: dict = None) -> Dict:
+    """
+    Initialize Google Earth Engine authentication.
+    
+    Request Body:
+    {
+        "credentials_path": "/path/to/gee-credentials.json"  (optional, uses GEE_CREDENTIALS env var if not provided)
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "message": "Google Earth Engine authenticated"
+    }
+    """
+    try:
+        credentials_path = None
+        if body:
+            credentials_path = body.get("credentials_path")
+        
+        logger.info("🔐 Initializing Google Earth Engine authentication...")
+        
+        result = initialize_gee(credentials_path)
+        
+        if result.get("success"):
+            logger.info("✓ GEE authentication successful")
+        else:
+            logger.error(f"❌ GEE auth failed: {result.get('error')}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ GEE initialization error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "code": "INIT_ERROR"
+        }
+
+
+@app.post("/gee/sentinel2")
+async def fetch_sentinel2(body: dict = None) -> Dict:
+    """
+    Fetch Sentinel-2 satellite data for a location.
+    
+    Request Body:
+    {
+        "latitude": 40.7128,
+        "longitude": -74.0060,
+        "radius_m": 5000,
+        "start_date": "2024-01-01",
+        "end_date": "2024-12-31",
+        "max_cloud_cover": 0.2
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "bands": {...},
+            "metadata": {...},
+            "image_id": "...",
+            "geometry": {...}
+        }
+    }
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
+        radius_m = body.get("radius_m", 5000)
+        start_date = body.get("start_date")
+        end_date = body.get("end_date")
+        max_cloud_cover = body.get("max_cloud_cover", 0.2)
+        
+        if latitude is None or longitude is None:
+            return {"error": "Missing latitude or longitude", "code": "INVALID_COORDS"}
+        
+        logger.info(f"🛰️ Fetching Sentinel-2 data for ({latitude}, {longitude})")
+        
+        result = fetch_satellite_data(
+            latitude=latitude,
+            longitude=longitude,
+            radius_m=radius_m,
+            start_date=start_date,
+            end_date=end_date,
+            max_cloud_cover=max_cloud_cover
+        )
+        
+        if result.get("success"):
+            logger.info(f"✓ Retrieved Sentinel-2 data with {len(result.get('data', {}).get('bands', {}))} bands")
+        else:
+            logger.error(f"⚠️ Sentinel-2 fetch failed: {result.get('error')}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Sentinel-2 fetch error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "code": "FETCH_ERROR"
+        }
+
+
+@app.post("/gee/dem")
+async def fetch_dem(body: dict = None) -> Dict:
+    """
+    Fetch Digital Elevation Model (DEM) data for a location.
+    
+    Request Body:
+    {
+        "latitude": 40.7128,
+        "longitude": -74.0060,
+        "radius_m": 5000
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "elevation": {...},
+            "metadata": {...}
+        }
+    }
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
+        radius_m = body.get("radius_m", 5000)
+        
+        if latitude is None or longitude is None:
+            return {"error": "Missing latitude or longitude", "code": "INVALID_COORDS"}
+        
+        logger.info(f"📐 Fetching DEM data for ({latitude}, {longitude})")
+        
+        result = fetch_elevation_data(
+            latitude=latitude,
+            longitude=longitude,
+            radius_m=radius_m
+        )
+        
+        if result.get("success"):
+            logger.info(f"✓ Retrieved DEM data")
+        else:
+            logger.error(f"⚠️ DEM fetch failed: {result.get('error')}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ DEM fetch error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "code": "DEM_ERROR"
+        }
+
+
+@app.post("/gee/spectral-indices")
+async def calculate_spectral_indices(body: dict = None) -> Dict:
+    """
+    Calculate spectral indices for mineral detection from Sentinel-2 data.
+    
+    Calculated indices:
+    - NDVI: Normalized Difference Vegetation Index
+    - NDII: Normalized Difference Iron Index (for mineral detection)
+    - SR: Spectral Ratio (geological features)
+    
+    Request Body:
+    {
+        "image_id": "COPERNICUS/S2_SR/...",
+        "roi_geometry": {...}
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "indices": {
+            "ndvi": {...},
+            "ndii": {...},
+            "sr": {...}
+        }
+    }
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        image_id = body.get("image_id")
+        roi_geometry = body.get("roi_geometry")
+        
+        if not image_id or not roi_geometry:
+            return {"error": "Missing image_id or roi_geometry", "code": "INVALID_PARAMS"}
+        
+        logger.info(f"🔬 Calculating spectral indices for image {image_id}")
+        
+        result = GEEIntegration.calculate_spectral_indices(image_id, roi_geometry)
+        
+        if result.get("success"):
+            logger.info(f"✓ Calculated spectral indices")
+        else:
+            logger.error(f"⚠️ Index calculation failed: {result.get('error')}")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Spectral index calculation error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "code": "INDEX_ERROR"
+        }
 
 
 import asyncio
