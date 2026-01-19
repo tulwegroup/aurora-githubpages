@@ -1277,26 +1277,26 @@ async def analyze_spectral_data(body: dict = None) -> Dict:
         
         logger.info(f"📥 Input body keys: {list(body.keys())}")
         
-        # Extract satellite data from various possible structures
-        satellite_data = None
+        # Extract bands from various possible structures
+        bands_data = None
+        
         if "data" in body and isinstance(body["data"], dict) and "bands" in body["data"]:
             # GEE multi-source format: {"success": True, "data": {"bands": {...}}}
-            satellite_data = body["data"]["bands"]
+            bands_data = body["data"]["bands"]
             logger.info("📍 Detected GEE multi-source format")
-        elif "bands" in body and isinstance(body["bands"], dict):
-            # Direct GEE format: {"bands": {...}, "metadata": {...}}
-            satellite_data = body["bands"]
-            logger.info("📍 Detected direct GEE format")
-        elif "bands" in body and isinstance(body["bands"], list):
-            # Demo format: {"bands": [{band: "B2", wavelength: ..., values: [...]}, ...]}
-            satellite_data = body
-            logger.info("📍 Detected demo/array format")
+        elif "bands" in body:
+            # Could be demo format (array) or GEE format (dict)
+            bands_data = body["bands"]
+            if isinstance(bands_data, list):
+                logger.info("📍 Detected demo/array format")
+            elif isinstance(bands_data, dict):
+                logger.info("📍 Detected GEE dict format")
         else:
             # Try using body directly
-            satellite_data = body
-            logger.info("📍 Using body directly as satellite data")
+            bands_data = body
+            logger.info("📍 Using body directly")
         
-        if not satellite_data:
+        if not bands_data:
             return {
                 "status": "error",
                 "error": "Could not extract bands from satellite data",
@@ -1306,37 +1306,45 @@ async def analyze_spectral_data(body: dict = None) -> Dict:
         # Extract bands into a normalized dictionary
         bands_dict = {}
         
-        # If bands is a dict with band names as keys (GEE format)
-        if isinstance(satellite_data, dict):
-            # Check if it's GEE format (keys like "B2", "B3", or "sentinel2_bands")
-            if any(key in satellite_data for key in ["B2", "B3", "B4", "B8", "B11", "B12"]):
-                bands_dict = satellite_data
-            elif "sentinel2_bands" in satellite_data:
-                bands_dict = satellite_data["sentinel2_bands"]
+        # If bands_data is a dict with band names as keys (GEE format)
+        if isinstance(bands_data, dict):
+            # Check if it's GEE format (keys like "B2", "B3")
+            if any(key in bands_data for key in ["B2", "B3", "B4", "B8", "B11", "B12"]):
+                bands_dict = bands_data
+                logger.info(f"✓ GEE dict detected with {len(bands_dict)} parameters")
+            elif "sentinel2_bands" in bands_data:
+                bands_dict = bands_data["sentinel2_bands"]
+                logger.info(f"✓ Nested sentinel2_bands found")
             else:
-                bands_dict = satellite_data
+                # Generic dict - may contain indices or other data
+                bands_dict = bands_data
+                logger.info(f"✓ Generic dict with {len(bands_dict)} keys")
         
-        # If bands is a list (demo format with band objects)
-        elif isinstance(satellite_data, list):
-            for band_obj in satellite_data:
+        # If bands_data is a list (demo format with band objects)
+        elif isinstance(bands_data, list):
+            logger.info(f"🔄 Processing {len(bands_data)} band objects from array")
+            for band_obj in bands_data:
                 if isinstance(band_obj, dict) and "band" in band_obj:
                     band_name = band_obj["band"]
                     values = band_obj.get("values", [])
-                    # Use mean of values array or first value
+                    # Use mean of values array
                     if values:
-                        bands_dict[band_name] = float(np.mean(values)) if isinstance(values, list) else float(values)
+                        band_val = float(np.mean(values)) if isinstance(values, list) else float(values)
                     else:
-                        bands_dict[band_name] = 0.15  # default
+                        band_val = 0.15  # default
+                    bands_dict[band_name] = band_val
+            logger.info(f"✓ Extracted {len(bands_dict)} bands from array format")
         
         if not bands_dict:
-            logger.warning("⚠️ Could not extract any band data")
+            logger.warning("⚠️ Could not extract any band data from structure")
+            logger.info(f"📊 bands_data type: {type(bands_data)}, keys: {list(bands_data.keys()) if isinstance(bands_data, dict) else 'N/A'}")
             return {
                 "status": "error",
                 "error": "No spectral band data found",
                 "code": "NO_BANDS"
             }
         
-        logger.info(f"📡 Extracted {len(bands_dict)} parameters: {list(bands_dict.keys())[:10]}...")
+        logger.info(f"📡 Band dictionary ready with {len(bands_dict)} parameters")
         
         # Calculate spectral indices from available data
         indices = {}
