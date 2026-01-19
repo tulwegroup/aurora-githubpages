@@ -16,6 +16,16 @@
 | **[CONFIGURATION_REFERENCE.md](CONFIGURATION_REFERENCE.md)** | Environment variables guide | Everyone | 15 min |
 | **[TESTING_GUIDE.md](TESTING_GUIDE.md)** | Testing framework & procedures | QA/Developers | 20 min |
 
+### 🏛️ Ground Truth Vault (NEW - v3.1.0)
+| Document | Purpose | Audience | Read Time |
+|----------|---------|----------|-----------|
+| **[GROUND_TRUTH_VAULT_SPECIFICATION.md](GROUND_TRUTH_VAULT_SPECIFICATION.md)** | **A-GTV v2.0** - Complete regulatory-grade subsurface data management system | Architects/Geophysicists | 60 min |
+| **[A_GTV_IMPLEMENTATION_SUMMARY.md](A_GTV_IMPLEMENTATION_SUMMARY.md)** | **Quick reference** - A-GTV deployment checklist & testing | Developers/DevOps | 15 min |
+| **Backend Modules** | Implementation details | Developers | - |
+| - `backend/ground_truth_vault.py` | Core GTV engine (800+ LOC, multi-tier conflict resolution) | Backend Devs | 30 min |
+| - `backend/calibration_controller.py` | System calibration (600+ LOC, 6 module integration) | Backend Devs | 25 min |
+| - `db/migrations/0004_ground_truth_vault.sql` | Database schema (8 new tables) | DBAs | 10 min |
+
 ### 💡 Learning Resources
 | Document | Purpose | Audience | Examples |
 |----------|---------|----------|----------|
