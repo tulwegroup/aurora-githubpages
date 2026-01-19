@@ -47,8 +47,10 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) =
   const handleFetchSatelliteData = async () => {
     setIsLoading(true);
     try {
-      // Example coordinates: Zambia copper belt
-      const data = await AuroraAPI.fetchSatelliteData(-9.5, 27.8);
+      // Use active scan location if available, otherwise default to Tanzania
+      const lat = props.activeScanLocation?.lat || -9.5;
+      const lon = props.activeScanLocation?.lon || 27.8;
+      const data = await AuroraAPI.fetchSatelliteData(lat, lon);
       setSatelliteData(data);
       console.log('✅ Satellite data fetched:', data);
     } catch (e) {

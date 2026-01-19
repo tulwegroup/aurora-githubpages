@@ -7,6 +7,7 @@ import { ExplorationCampaign } from '../types';
 
 interface TMALViewProps {
   campaign: ExplorationCampaign;
+  activeScanLocation?: { lat: number; lon: number; name: string } | null;
 }
 
 const DEFAULT_PROJECTS = [
@@ -15,9 +16,22 @@ const DEFAULT_PROJECTS = [
     { id: 'sa', name: 'Saudi Shield (Gold)', lat: 24.50, lon: 42.10, type: 'Precious Metal', context: 'Stable Craton / Shear Zone' }
 ];
 
-const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
+const TMALView: React.FC<TMALViewProps> = ({ campaign, activeScanLocation }) => {
   // Combine defaults with active campaign if it's new
   const projects = React.useMemo(() => {
+     // Prioritize active scan location from MissionControl
+     if (activeScanLocation) {
+         const activeScanProject = {
+             id: 'active-scan',
+             name: activeScanLocation.name,
+             lat: activeScanLocation.lat,
+             lon: activeScanLocation.lon,
+             type: 'Multi-Mineral Survey',
+             context: 'Active Scan Location'
+         };
+         return [activeScanProject, ...DEFAULT_PROJECTS];
+     }
+
      const activeName = campaign?.regionName || campaign?.name || 'Unknown Region';
      const campaignProject = {
          id: 'active-campaign',
@@ -45,7 +59,7 @@ const TMALView: React.FC<TMALViewProps> = ({ campaign }) => {
      const existing = DEFAULT_PROJECTS.find(p => p.name.includes(activeName));
      if (existing) return [campaignProject, ...DEFAULT_PROJECTS.filter(p => p.id !== existing.id)];
      return [campaignProject, ...DEFAULT_PROJECTS];
-  }, [campaign]);
+  }, [campaign, activeScanLocation]);
 
   const [selectedProject, setSelectedProject] = useState(projects[0]);
   const [temporalData, setTemporalData] = useState<any[]>(TEMPORAL_DATA);

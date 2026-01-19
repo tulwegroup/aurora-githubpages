@@ -9,14 +9,18 @@ import { AuroraAPI } from '../api';
 interface DashboardProps {
     campaign: ExplorationCampaign;
     onLaunchCampaign: (campaign: ExplorationCampaign) => void;
-    onAdvancePhase: () => void;
+    onAdvancePhase?: () => void;
     onUpdateCampaign: (campaign: ExplorationCampaign) => void;
     onNavigate: (view: AppView) => void;
     hiveMindState: HiveMindState;
     setHiveMindState: React.Dispatch<React.SetStateAction<HiveMindState>>;
+    activeScanLocation?: { lat: number; lon: number; name: string } | null;
+    onSetActiveScanLocation?: (lat: number, lon: number, name: string) => void;
+    scrollToTop?: () => void;
+    scrollToBottom?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onUpdateCampaign, onNavigate }) => {
+const Dashboard: React.FC<DashboardProps> = ({ campaign, onLaunchCampaign, onUpdateCampaign, onNavigate, activeScanLocation }) => {
     const [showMissionPlanner, setShowMissionPlanner] = useState(false);
     const [missionConfig, setMissionConfig] = useState({
         coordinates: campaign.targetCoordinates || '',

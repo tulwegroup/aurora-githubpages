@@ -87,6 +87,8 @@ const App: React.FC = () => {
   const [isBooting, setIsBooting] = useState(true);
   const [bootStep, setBootStep] = useState('Initializing Secure Enclave...');
   const [hiveMind, setHiveMind] = useState<HiveMindState>({ isScanning: false, scanGrid: [], activeAgents: ['Au'], logs: [], progress: 0, hits: 0, misses: 0 });
+  const [activeScanLocation, setActiveScanLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const bootSystem = async () => {
@@ -134,6 +136,22 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSetActiveScanLocation = (lat: number, lon: number, name: string) => {
+    setActiveScanLocation({ lat, lon, name });
+  };
+
+  const scrollToTop = () => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: contentRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
   const renderContent = () => {
     let ViewComponent: any;
     switch (activeTab) {
@@ -165,6 +183,10 @@ const App: React.FC = () => {
             setHiveMindState={setHiveMind}
             customLogo={customLogo}
             setCustomLogo={setCustomLogo}
+            activeScanLocation={activeScanLocation}
+            onSetActiveScanLocation={handleSetActiveScanLocation}
+            scrollToTop={scrollToTop}
+            scrollToBottom={scrollToBottom}
           />
         </Suspense>
       </ErrorBoundary>
@@ -194,7 +216,7 @@ const App: React.FC = () => {
             <div className="w-9 h-9 bg-slate-800 rounded-full flex items-center justify-center border border-aurora-700 shadow-inner"><User size={16} className="text-slate-400" /></div>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto custom-scrollbar">{renderContent()}</div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar relative" ref={contentRef}>{renderContent()}</div>
       </main>
     </div>
   );
