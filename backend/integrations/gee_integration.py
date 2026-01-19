@@ -47,9 +47,18 @@ class GEEIntegration:
                     "code": "NO_CREDENTIALS"
                 }
             
-            # Authenticate with service account
-            ee.Authenticate(credentials_path=creds_path)
-            ee.Initialize()
+            # Check if file exists
+            if not os.path.exists(creds_path):
+                logger.error(f"❌ Credentials file not found: {creds_path}")
+                return {
+                    "success": False,
+                    "error": f"Credentials file not found: {creds_path}",
+                    "code": "FILE_NOT_FOUND"
+                }
+            
+            # Authenticate with service account credentials
+            credentials = ee.ServiceAccountCredentials.from_authorized_user_file(creds_path)
+            ee.Initialize(credentials)
             
             cls._initialized = True
             cls._credentials_path = creds_path

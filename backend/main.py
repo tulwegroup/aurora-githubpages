@@ -47,6 +47,8 @@ import os
 from pathlib import Path
 import json
 import datetime as dt
+import base64
+import tempfile
 
 # Use relative imports for backend modules
 from .models import (
@@ -167,6 +169,25 @@ async def startup_event():
     """Initialize on startup - non-blocking"""
     global _startup_complete, gee_initialized
     logger.info("🚀 Aurora OSI v3 Backend Starting")
+    
+    # Initialize GEE from Railway environment variable (base64 encoded JSON)
+    try:
+        gee_json_content = os.getenv("GEE_JSON_CONTENT")
+        if gee_json_content:
+            try:
+                # Decode base64 JSON
+                gee_json_str = base64.b64decode(gee_json_content).decode()
+                # Write to temp file
+                temp_dir = tempfile.gettempdir()
+                creds_path = os.path.join(temp_dir, "gee-credentials.json")
+                with open(creds_path, 'w') as f:
+                    f.write(gee_json_str)
+                os.environ["GEE_CREDENTIALS"] = creds_path
+                logger.info("✓ GEE credentials initialized from Railway GEE_JSON_CONTENT")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to decode Railway GEE credentials: {str(e)}")
+    except Exception as e:
+        logger.warning(f"⚠️ Railway GEE setup error: {str(e)}")
     
     # Initialize GEE if available
     try:

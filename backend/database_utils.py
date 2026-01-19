@@ -8,9 +8,12 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import logging
-from .database_manager import db_manager
+from .database_manager import get_db
 
 logger = logging.getLogger(__name__)
+
+# Get database manager instance
+db_manager = get_db()
 
 
 class ScanDatabase:
