@@ -3,6 +3,38 @@ Aurora OSI v3 - FastAPI Backend
 Multi-physics satellite fusion for planetary-scale subsurface intelligence
 """
 
+# ================================================================
+# Aurora OSI – Core Physics-AI / Quantum Inversion Engine
+# Invocation of Divine Knowledge (Non-executing comment block)
+# ================================================================
+#
+# Surah Al-An'am – 6:59
+#
+# Arabic:
+# وعنده مفاتح الغيب لا يعلمها الا هو
+# ويعلم ما في البر والبحر
+#
+# Transliteration:
+# Wa 'indahu mafatihu al-ghaybi la ya'lamha illa huwa,
+# wa ya'lamu ma fil-barri wal-bahr.
+#
+# English Translation:
+# "With Him are the keys to the unseen; none knows them except Him.
+# And He knows whatever is in the land and in the sea."
+#
+# Context Note:
+# This verse affirms that all hidden things—whether deep beneath the earth
+# or in the depths of the oceans—are perfectly known only by Allah.
+# As this engine analyzes the unseen subsurface using physics, AI, and
+# quantum methods, we acknowledge that ultimate knowledge belongs to Him.
+#
+# Optional Zikr (also commented):
+# # Ya Fattah, Ya Alim – O Opener, O All-Knowing
+#
+# ================================================================
+# End of Invocation Block
+# ================================================================
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
