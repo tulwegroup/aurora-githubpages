@@ -45,6 +45,8 @@ from typing import List, Dict, Optional
 import logging
 import os
 from pathlib import Path
+import json
+import datetime as dt
 
 # Use relative imports for backend modules
 from .models import (
@@ -80,6 +82,14 @@ except Exception as e:
     logger_temp.warning(f"⚠️ Could not import scan_worker: {str(e)}")
     initialize_scan_scheduler = None
     shutdown_scan_scheduler = None
+try:
+    from .database_utils import scan_db
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.info("✓ Database utilities imported successfully")
+except Exception as e:
+    logger_temp = logging.getLogger(__name__)
+    logger_temp.warning(f"⚠️ Could not import database_utils: {str(e)}")
+    scan_db = None
 try:
     from .integrations.gee_fetcher import GEEDataFetcher
     logger_temp = logging.getLogger(__name__)
@@ -1377,6 +1387,7 @@ async def generate_visualizations(body: dict = None) -> Dict:
 async def store_scan_results(body: dict = None) -> Dict:
     """
     Store scan results and all analysis outputs to database.
+    Persists final scan data with PINN, USHE, and TMAL outputs.
     Returns error if storage fails - NO MOCK DATA.
     """
     try:
@@ -1387,23 +1398,51 @@ async def store_scan_results(body: dict = None) -> Dict:
         scan_name = body.get("scan_name")
         latitude = body.get("latitude")
         longitude = body.get("longitude")
-        results = body.get("results")
+        results = body.get("results", {})
+        visualizations = body.get("visualizations", {})
         
-        if not all([scan_id, scan_name, latitude, longitude, results]):
-            return {"error": "Missing required fields: scan_id, scan_name, latitude, longitude, results", "code": "MISSING_FIELDS"}
+        if not all([scan_id, scan_name, latitude, longitude]):
+            return {"error": "Missing required fields: scan_id, scan_name, latitude, longitude", "code": "MISSING_FIELDS"}
         
         logger.info(f"💾 Storing scan results for '{scan_name}' (ID: {scan_id})")
         
-        # TODO: Implement database storage
-        # For now, return error indicating database not yet set up
+        if not scan_db:
+            logger.warning("⚠️ Database utilities not available")
+            return {"error": "Database not ready", "code": "DB_NOT_READY"}
+        
+        # Create scan results record
+        result = scan_db.create_scan_results(scan_id)
+        if "error" in result:
+            return result
+        
+        # Store PINN results if available
+        if results.get("pinn"):
+            scan_db.update_step_result(scan_id, "pinn", json.dumps(results["pinn"]), "completed")
+        
+        # Store USHE results if available
+        if results.get("ushe"):
+            scan_db.update_step_result(scan_id, "ushe", json.dumps(results["ushe"]), "completed")
+        
+        # Store TMAL results if available
+        if results.get("tmal"):
+            scan_db.update_step_result(scan_id, "tmal", json.dumps(results["tmal"]), "completed")
+        
+        # Create and store visualizations if available
+        if visualizations:
+            viz_result = scan_db.create_visualizations(scan_id)
+            if "success" in viz_result:
+                viz_2d = json.dumps(visualizations.get("viz_2d")) if visualizations.get("viz_2d") else None
+                viz_3d = json.dumps(visualizations.get("viz_3d")) if visualizations.get("viz_3d") else None
+                scan_db.update_visualization(scan_id, viz_2d, viz_3d)
+        
+        # Mark scan as completed
+        scan_db.update_scan_status(scan_id, "completed")
+        
+        logger.info(f"✓ Successfully stored scan results for {scan_id}")
         return {
-            "error": "Database storage not yet implemented - schema in development",
-            "code": "DB_NOT_READY",
-            "details": {
-                "scan_id": scan_id,
-                "scan_name": scan_name,
-                "results_keys": list(results.keys())
-            }
+            "success": True,
+            "scan_id": scan_id,
+            "message": "Scan results stored successfully"
         }
         
     except Exception as e:
@@ -1411,19 +1450,73 @@ async def store_scan_results(body: dict = None) -> Dict:
         return {"error": str(e), "code": "STORAGE_ERROR"}
 
 
+@app.post("/scans/create")
+async def create_new_scan(body: dict = None) -> Dict:
+    """
+    Create a new scan record and initialize results/visualizations tables.
+    Called when MissionControl starts a new scan.
+    Returns: {id, success} on success, {error, code} on failure
+    """
+    try:
+        if not body:
+            return {"error": "Missing request body", "code": "INVALID_REQUEST"}
+        
+        scan_name = body.get("scan_name", f"Scan {dt.datetime.now().isoformat()}")
+        latitude = body.get("latitude")
+        longitude = body.get("longitude")
+        user_id = body.get("user_id")
+        
+        if latitude is None or longitude is None:
+            return {"error": "Missing latitude or longitude", "code": "INVALID_COORDS"}
+        
+        logger.info(f"📍 Creating new scan '{scan_name}' at ({latitude}, {longitude})")
+        
+        if not scan_db:
+            logger.warning("⚠️ Database utilities not available")
+            return {"error": "Database not ready", "code": "DB_NOT_READY"}
+        
+        # Create scan record
+        result = scan_db.create_scan(scan_name, latitude, longitude, user_id)
+        
+        if "error" in result:
+            return result
+        
+        scan_id = result["id"]
+        
+        # Pre-create results and visualizations records
+        scan_db.create_scan_results(scan_id)
+        scan_db.create_visualizations(scan_id)
+        
+        logger.info(f"✓ Created new scan {scan_id}")
+        return {
+            "success": True,
+            "id": scan_id,
+            "message": f"Scan '{scan_name}' created successfully"
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Scan creation error: {str(e)}")
+        return {"error": str(e), "code": "SCAN_CREATE_ERROR"}
+
+
 @app.get("/scans/history")
 async def get_all_scans() -> List[Dict]:
     """
-    Retrieve all historical scans from database.
-    Returns empty array if database not ready, error response only on actual failure.
+    Retrieve all historical scans from database with pagination.
+    Returns: Array of scan summaries (id, name, status, timestamp, etc.)
     """
     try:
         logger.info("📜 Retrieving scan history")
         
-        # TODO: Query database for all scans
-        # For now, return empty array (database not yet implemented)
-        # Frontend will handle this gracefully
-        return []
+        if not scan_db:
+            logger.warning("⚠️ Database utilities not available")
+            return []
+        
+        # Retrieve scans with limit and offset
+        scans = scan_db.get_all_scans(limit=50, offset=0)
+        
+        logger.info(f"✓ Retrieved {len(scans)} scans from history")
+        return scans
         
     except Exception as e:
         logger.error(f"❌ Scan history retrieval error: {str(e)}")
@@ -1434,19 +1527,24 @@ async def get_all_scans() -> List[Dict]:
 @app.get("/scans/{scan_id}/details")
 async def get_scan_details(scan_id: str) -> Dict:
     """
-    Retrieve detailed results for a specific scan.
-    Returns error response if scan not found or query fails.
+    Retrieve complete scan details including analysis results and visualizations.
+    Returns: {id, name, status, results: {pinn, ushe, tmal}, visualizations: {2d, 3d}, ...}
     """
     try:
         logger.info(f"📖 Retrieving details for scan {scan_id}")
         
-        # TODO: Query database for specific scan
-        # For now, return error object (database not yet implemented)
-        return {
-            "error": f"Scan details not available - database not yet implemented",
-            "code": "DB_NOT_READY",
-            "scan_id": scan_id
-        }
+        if not scan_db:
+            logger.warning("⚠️ Database utilities not available")
+            return {"error": "Database not ready", "code": "DB_NOT_READY"}
+        
+        # Retrieve full scan details from database
+        scan_detail = scan_db.get_scan_details(scan_id)
+        
+        if "error" in scan_detail:
+            return scan_detail
+        
+        logger.info(f"✓ Retrieved full details for scan {scan_id}")
+        return scan_detail
         
     except Exception as e:
         logger.error(f"❌ Scan details retrieval error: {str(e)}")
