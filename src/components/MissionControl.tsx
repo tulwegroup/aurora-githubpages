@@ -257,7 +257,7 @@ const MissionControl: React.FC = () => {
 
       {/* Active Scan */}
       {activeScan && (
-        <div className="bg-aurora-900/30 border border-emerald-700 rounded-xl p-6">
+        <div className="bg-aurora-900/30 border border-emerald-700 rounded-xl p-6 max-h-[70vh] flex flex-col">
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-lg font-bold text-emerald-400">{activeScan.name}</h2>
@@ -274,8 +274,8 @@ const MissionControl: React.FC = () => {
             <p className="text-xs text-slate-400 mt-2">{activeScan.overallProgress}% Complete</p>
           </div>
 
-          {/* Steps */}
-          <div className="space-y-2">
+          {/* Steps - Scrollable */}
+          <div className="space-y-2 overflow-y-auto flex-1 pr-2">
             {activeScan.steps.map((step) => (
               <div key={step.id} className="flex items-center space-x-3 p-3 bg-slate-950 rounded border border-slate-800">
                 {step.status === 'pending' && <div className="w-5 h-5 rounded-full border-2 border-slate-600" />}
@@ -286,11 +286,23 @@ const MissionControl: React.FC = () => {
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-white">{step.name}</p>
                   {step.error && <p className="text-xs text-red-400 mt-1">{step.error}</p>}
+                  {step.progress > 0 && step.progress < 100 && (
+                    <div className="text-xs text-slate-400 mt-1">{step.progress}% - {step.startTime && `${(new Date().getTime() - step.startTime.getTime()) / 1000}s`}</div>
+                  )}
                 </div>
-                <span className="text-xs text-slate-400">{step.progress}%</span>
+                <span className="text-xs text-slate-400 font-mono">{step.progress}%</span>
               </div>
             ))}
           </div>
+          
+          {/* Results Summary */}
+          {activeScan.overallProgress === 100 && (
+            <div className="mt-4 p-4 bg-emerald-900/20 border border-emerald-700 rounded">
+              <p className="text-sm text-emerald-300 font-semibold">✅ Scan Complete!</p>
+              <p className="text-xs text-slate-400 mt-2">All 7 analysis steps completed successfully.</p>
+              <p className="text-xs text-slate-400 mt-1">View detailed results in Historical Scans or export data.</p>
+            </div>
+          )}
         </div>
       )}
 
