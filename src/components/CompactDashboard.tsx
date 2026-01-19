@@ -49,8 +49,8 @@ const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children, act
     setIsLoading(true);
     try {
       // Use active scan location if available, otherwise default to Tanzania
-      const lat = props.activeScanLocation?.lat || -9.5;
-      const lon = props.activeScanLocation?.lon || 27.8;
+      const lat = activeScanLocation?.lat || -9.5;
+      const lon = activeScanLocation?.lon || 27.8;
       const data = await AuroraAPI.fetchSatelliteData(lat, lon);
       setSatelliteData(data);
       console.log('✅ Satellite data fetched:', data);
