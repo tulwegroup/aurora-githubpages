@@ -5,6 +5,7 @@ import { AuroraAPI } from '../api';
 interface CompactViewProps {
   activeTab: string;
   children?: React.ReactNode;
+  activeScanLocation?: { lat: number; lon: number; name: string } | null;
 }
 
 interface SectionState {
@@ -18,7 +19,7 @@ interface SectionState {
  * - Grid layout for multiple components
  * - Compact spacing and controls
  */
-const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children }) => {
+const CompactDashboard: React.FC<CompactViewProps> = ({ activeTab, children, activeScanLocation }) => {
   const [expanded, setExpanded] = useState<SectionState>({
     syncDiagnostics: true,
     scanMonitor: true,

@@ -27,10 +27,11 @@ interface ActiveScan {
 interface MissionControlProps {
   onSetActiveScanLocation?: (lat: number, lon: number, name: string) => void;
   scrollToBottom?: () => void;
+  scrollToTop?: () => void;
   activeScanLocation?: { lat: number; lon: number; name: string } | null;
 }
 
-const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation, scrollToBottom, activeScanLocation }) => {
+const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation, scrollToBottom, scrollToTop, activeScanLocation }) => {
   const [activeScan, setActiveScan] = useState<ActiveScan | null>(null);
   const [latitude, setLatitude] = useState<string>('-9.5');
   const [longitude, setLongitude] = useState<string>('27.8');
