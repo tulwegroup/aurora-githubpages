@@ -1262,179 +1262,264 @@ async def analyze_spectral_data(body: dict = None) -> Dict:
     """
     Perform spectral analysis on satellite data.
     Analyzes spectral bands and calculates indices for mineral detection.
+    Handles multiple data formats from different sources.
     """
     try:
         logger.info("📊 Spectral analysis started")
         
-        satellite_data = body if body else {}
+        # Handle multiple input formats
+        if not body:
+            return {
+                "status": "error",
+                "error": "No satellite data provided",
+                "code": "NO_DATA"
+            }
+        
+        logger.info(f"📥 Input body keys: {list(body.keys())}")
+        
+        # Extract satellite data from various possible structures
+        satellite_data = None
+        if "data" in body and isinstance(body["data"], dict) and "bands" in body["data"]:
+            # GEE multi-source format: {"success": True, "data": {"bands": {...}}}
+            satellite_data = body["data"]["bands"]
+            logger.info("📍 Detected GEE multi-source format")
+        elif "bands" in body and isinstance(body["bands"], dict):
+            # Direct GEE format: {"bands": {...}, "metadata": {...}}
+            satellite_data = body["bands"]
+            logger.info("📍 Detected direct GEE format")
+        elif "bands" in body and isinstance(body["bands"], list):
+            # Demo format: {"bands": [{band: "B2", wavelength: ..., values: [...]}, ...]}
+            satellite_data = body
+            logger.info("📍 Detected demo/array format")
+        else:
+            # Try using body directly
+            satellite_data = body
+            logger.info("📍 Using body directly as satellite data")
         
         if not satellite_data:
             return {
                 "status": "error",
-                "error": "No satellite data provided for analysis",
-                "code": "NO_DATA"
-            }
-        
-        # Extract bands from satellite data
-        bands = satellite_data.get("bands", {})
-        
-        if not bands:
-            logger.warning("⚠️ No bands in satellite data")
-            return {
-                "status": "error",
-                "error": "No spectral bands found in satellite data",
+                "error": "Could not extract bands from satellite data",
                 "code": "NO_BANDS"
             }
         
-        logger.info(f"📡 Analyzing {len(bands)} spectral parameters")
+        # Extract bands into a normalized dictionary
+        bands_dict = {}
+        
+        # If bands is a dict with band names as keys (GEE format)
+        if isinstance(satellite_data, dict):
+            # Check if it's GEE format (keys like "B2", "B3", or "sentinel2_bands")
+            if any(key in satellite_data for key in ["B2", "B3", "B4", "B8", "B11", "B12"]):
+                bands_dict = satellite_data
+            elif "sentinel2_bands" in satellite_data:
+                bands_dict = satellite_data["sentinel2_bands"]
+            else:
+                bands_dict = satellite_data
+        
+        # If bands is a list (demo format with band objects)
+        elif isinstance(satellite_data, list):
+            for band_obj in satellite_data:
+                if isinstance(band_obj, dict) and "band" in band_obj:
+                    band_name = band_obj["band"]
+                    values = band_obj.get("values", [])
+                    # Use mean of values array or first value
+                    if values:
+                        bands_dict[band_name] = float(np.mean(values)) if isinstance(values, list) else float(values)
+                    else:
+                        bands_dict[band_name] = 0.15  # default
+        
+        if not bands_dict:
+            logger.warning("⚠️ Could not extract any band data")
+            return {
+                "status": "error",
+                "error": "No spectral band data found",
+                "code": "NO_BANDS"
+            }
+        
+        logger.info(f"📡 Extracted {len(bands_dict)} parameters: {list(bands_dict.keys())[:10]}...")
         
         # Calculate spectral indices from available data
         indices = {}
         detections = []
         
-        # Try to get Sentinel-2 bands
-        s2_bands = bands.get("sentinel2_bands", {})
-        if s2_bands:
-            logger.info("📊 Processing Sentinel-2 spectral data")
-            
-            # Extract band values (handle both single values and arrays)
-            def get_band_value(band_dict, band_name, default=0.0):
-                if not band_dict:
-                    return default
-                val = band_dict.get(band_name, default)
-                if isinstance(val, (list, tuple)):
-                    return float(val[0]) if val else default
-                return float(val) if val else default
-            
-            b2 = get_band_value(s2_bands, "B2", 0.1)  # Blue
-            b3 = get_band_value(s2_bands, "B3", 0.15)  # Green
-            b4 = get_band_value(s2_bands, "B4", 0.1)  # Red
-            b5 = get_band_value(s2_bands, "B5", 0.2)  # Red Edge 1
-            b6 = get_band_value(s2_bands, "B6", 0.25)  # Red Edge 2
-            b7 = get_band_value(s2_bands, "B7", 0.28)  # Red Edge 3
-            b8 = get_band_value(s2_bands, "B8", 0.35)  # NIR
-            b11 = get_band_value(s2_bands, "B11", 0.15)  # SWIR1
-            b12 = get_band_value(s2_bands, "B12", 0.08)  # SWIR2
-            
-            # Calculate spectral indices
-            # NDVI (Vegetation)
-            if b8 + b4 > 0:
-                ndvi = (b8 - b4) / (b8 + b4)
-                indices['ndvi'] = float(ndvi)
-            
-            # NDBI (Built-up/mineral)
-            if b11 + b8 > 0:
-                ndbi = (b11 - b8) / (b11 + b8)
-                indices['ndbi'] = float(ndbi)
-            
-            # NDMI (Moisture/mineralogy)
-            if b8 + b11 > 0:
-                ndmi = (b8 - b11) / (b8 + b11)
-                indices['ndmi'] = float(ndmi)
-            
-            # Iron oxide absorption (around 900nm in Landsat)
-            if b6 + b5 > 0:
-                iron_index = (b5 - b6) / (b5 + b6)
-                indices['iron_oxide_index'] = float(iron_index)
-            
-            # Copper absorption (characteristic in red-edge region)
-            if b5 + b6 + b7 > 0:
-                copper_index = (b7 - b5) / (b5 + b6 + b7)
-                indices['copper_index'] = float(copper_index)
-            
-            # Mineral detection based on spectral signatures
-            logger.info("🔍 Detecting mineral spectral signatures...")
-            
-            # Copper signature (high in SWIR, low in red)
-            if indices.get('copper_index', 0) > 0.1 and indices.get('ndbi', 0) > 0:
-                copper_confidence = min(0.95, 0.7 + indices['copper_index'])
-                detections.append({
-                    "mineral": "Copper",
-                    "confidence": float(copper_confidence),
-                    "spectral_signature": "High SWIR absorption at 1610nm",
-                    "contributing_indices": ["copper_index", "ndbi"],
-                    "wavelength_features": [705, 783, 842, 1610]
-                })
-            
-            # Iron oxide signature
-            if indices.get('iron_oxide_index', 0) > 0.05:
-                iron_confidence = min(0.90, 0.65 + indices['iron_oxide_index'])
-                detections.append({
-                    "mineral": "Iron Oxide (Hematite/Goethite)",
-                    "confidence": float(iron_confidence),
-                    "spectral_signature": "Absorption edge at red wavelengths",
-                    "contributing_indices": ["iron_oxide_index", "ndbi"],
-                    "wavelength_features": [560, 665, 705]
-                })
-            
-            # Gold signature (bright reflectance across bands)
-            mean_reflectance = np.mean([b2, b3, b4, b5, b6, b7])
-            if mean_reflectance > 0.20:
-                gold_confidence = min(0.85, 0.6 + (mean_reflectance - 0.15) * 2)
-                detections.append({
-                    "mineral": "Gold (alteration)",
-                    "confidence": float(gold_confidence),
-                    "spectral_signature": "High reflectance across visible and NIR",
-                    "contributing_indices": ["bright_reflectance"],
-                    "wavelength_features": [490, 560, 665, 842]
-                })
-            
-            # Cobalt/Nickel signature (low NDVI, high NDBI)
-            if indices.get('ndvi', 0) < 0.3 and indices.get('ndbi', 0) > 0.1:
-                cobalt_confidence = min(0.82, 0.55 + indices['ndbi'])
-                detections.append({
-                    "mineral": "Cobalt/Nickel",
-                    "confidence": float(cobalt_confidence),
-                    "spectral_signature": "Low vegetation, high built-up/mineral index",
-                    "contributing_indices": ["ndvi", "ndbi"],
-                    "wavelength_features": [490, 705, 1610]
-                })
-            
-            # Lithium signature (very bright, low vegetation)
-            if mean_reflectance > 0.25 and indices.get('ndvi', 0) < 0.2:
-                lithium_confidence = min(0.78, 0.5 + (mean_reflectance - 0.20) * 1.5)
-                detections.append({
-                    "mineral": "Lithium (bright alteration)",
-                    "confidence": float(lithium_confidence),
-                    "spectral_signature": "Very high reflectance, altered terrane",
-                    "contributing_indices": ["bright_reflectance", "low_ndvi"],
-                    "wavelength_features": [560, 665, 840]
-                })
+        # Extract band values from normalized dict
+        def get_band_value(band_dict, band_name, default=0.1):
+            """Extract a single band value, handling multiple formats"""
+            if not band_dict:
+                return default
+            val = band_dict.get(band_name)
+            if val is None:
+                return default
+            if isinstance(val, (list, tuple)):
+                return float(val[0]) if val else default
+            try:
+                return float(val)
+            except (ValueError, TypeError):
+                return default
         
-        # Try Landsat bands
-        ls_bands = bands.get("landsat_bands", {})
-        if ls_bands and not s2_bands:
-            logger.info("📊 Processing Landsat spectral data")
-            # Similar analysis with Landsat bands (fewer but broader coverage)
-            # For now, if no S2 data use generic detection
-            if not detections:
-                detections.append({
-                    "mineral": "Alteration Zone",
-                    "confidence": 0.65,
-                    "spectral_signature": "Landsat multispectral signature detected",
-                    "contributing_indices": [],
-                    "wavelength_features": []
-                })
+        # Extract Sentinel-2 bands
+        b2 = get_band_value(bands_dict, "B2", 0.1)  # Blue
+        b3 = get_band_value(bands_dict, "B3", 0.15)  # Green
+        b4 = get_band_value(bands_dict, "B4", 0.1)  # Red
+        b5 = get_band_value(bands_dict, "B5", 0.2)  # Red Edge 1
+        b6 = get_band_value(bands_dict, "B6", 0.25)  # Red Edge 2
+        b7 = get_band_value(bands_dict, "B7", 0.28)  # Red Edge 3
+        b8 = get_band_value(bands_dict, "B8", 0.35)  # NIR
+        b11 = get_band_value(bands_dict, "B11", 0.15)  # SWIR1
+        b12 = get_band_value(bands_dict, "B12", 0.08)  # SWIR2
+        
+        # Check what data we have
+        has_s2 = any([bands_dict.get(f"B{i}") for i in [2, 3, 4, 8, 11, 12]])
+        has_landsat = any([bands_dict.get(f"B{i}") for i in [1, 2, 3, 4, 5, 6, 7]])
+        
+        logger.info(f"📊 Band data: Sentinel-2={has_s2}, Landsat={has_landsat}")
+        
+        if not has_s2 and not has_landsat:
+            logger.warning("⚠️ No optical bands found")
+            # Try NDVI/NDBI if available as precomputed indices
+            if "ndvi" in bands_dict or "NDVI" in bands_dict:
+                logger.info("✓ Using precomputed indices")
+            else:
+                return {
+                    "status": "error",
+                    "error": "No optical spectral bands available for analysis",
+                    "parameters_analyzed": list(bands_dict.keys())
+                }
+        
+        # Calculate spectral indices
+        # NDVI (Vegetation)
+        if b8 + b4 > 0:
+            ndvi = (b8 - b4) / (b8 + b4)
+            indices['ndvi'] = float(ndvi)
+            logger.info(f"  ✓ NDVI: {ndvi:.3f}")
+        elif "ndvi" in bands_dict:
+            # Use precomputed NDVI
+            ndvi_val = get_band_value(bands_dict, "ndvi")
+            if isinstance(bands_dict["ndvi"], list):
+                ndvi_val = float(np.mean(bands_dict["ndvi"]))
+            indices['ndvi'] = float(ndvi_val)
+            logger.info(f"  ✓ NDVI (precomputed): {ndvi_val:.3f}")
+        
+        # NDBI (Built-up/mineral)
+        if b11 + b8 > 0:
+            ndbi = (b11 - b8) / (b11 + b8)
+            indices['ndbi'] = float(ndbi)
+            logger.info(f"  ✓ NDBI: {ndbi:.3f}")
+        elif "ndbi" in bands_dict:
+            ndbi_val = get_band_value(bands_dict, "ndbi")
+            if isinstance(bands_dict["ndbi"], list):
+                ndbi_val = float(np.mean(bands_dict["ndbi"]))
+            indices['ndbi'] = float(ndbi_val)
+            logger.info(f"  ✓ NDBI (precomputed): {ndbi_val:.3f}")
+        
+        # NDMI (Moisture/mineralogy)
+        if b8 + b11 > 0:
+            ndmi = (b8 - b11) / (b8 + b11)
+            indices['ndmi'] = float(ndmi)
+            logger.info(f"  ✓ NDMI: {ndmi:.3f}")
+        elif "ndmi" in bands_dict:
+            ndmi_val = get_band_value(bands_dict, "ndmi")
+            if isinstance(bands_dict["ndmi"], list):
+                ndmi_val = float(np.mean(bands_dict["ndmi"]))
+            indices['ndmi'] = float(ndmi_val)
+            logger.info(f"  ✓ NDMI (precomputed): {ndmi_val:.3f}")
+        
+        # Iron oxide absorption
+        if b6 + b5 > 0:
+            iron_index = (b5 - b6) / (b5 + b6)
+            indices['iron_oxide_index'] = float(iron_index)
+            logger.info(f"  ✓ Iron Index: {iron_index:.3f}")
+        
+        # Copper absorption
+        if b5 + b6 + b7 > 0:
+            copper_index = (b7 - b5) / (b5 + b6 + b7)
+            indices['copper_index'] = float(copper_index)
+            logger.info(f"  ✓ Copper Index: {copper_index:.3f}")
+        
+        logger.info(f"🔍 Detecting mineral spectral signatures...")
+        
+        # Mineral detection based on spectral signatures
+        # Copper signature (high in SWIR, low in red)
+        if indices.get('copper_index', 0) > 0.1 and indices.get('ndbi', 0) > 0:
+            copper_confidence = min(0.95, 0.7 + indices['copper_index'])
+            detections.append({
+                "mineral": "Copper",
+                "confidence": float(copper_confidence),
+                "spectral_signature": "High SWIR absorption at 1610nm",
+                "contributing_indices": ["copper_index", "ndbi"],
+                "wavelength_features": [705, 783, 842, 1610]
+            })
+            logger.info(f"  ✓ Copper: {copper_confidence:.2f}")
+        
+        # Iron oxide signature
+        if indices.get('iron_oxide_index', 0) > 0.05:
+            iron_confidence = min(0.90, 0.65 + indices['iron_oxide_index'])
+            detections.append({
+                "mineral": "Iron Oxide (Hematite/Goethite)",
+                "confidence": float(iron_confidence),
+                "spectral_signature": "Absorption edge at red wavelengths",
+                "contributing_indices": ["iron_oxide_index", "ndbi"],
+                "wavelength_features": [560, 665, 705]
+            })
+            logger.info(f"  ✓ Iron Oxide: {iron_confidence:.2f}")
+        
+        # Gold signature (bright reflectance across bands)
+        mean_reflectance = np.mean([b2, b3, b4, b5, b6, b7])
+        if mean_reflectance > 0.20:
+            gold_confidence = min(0.85, 0.6 + (mean_reflectance - 0.15) * 2)
+            detections.append({
+                "mineral": "Gold (alteration)",
+                "confidence": float(gold_confidence),
+                "spectral_signature": "High reflectance across visible and NIR",
+                "contributing_indices": ["bright_reflectance"],
+                "wavelength_features": [490, 560, 665, 842]
+            })
+            logger.info(f"  ✓ Gold: {gold_confidence:.2f}")
+        
+        # Cobalt/Nickel signature (low NDVI, high NDBI)
+        if indices.get('ndvi', 0) < 0.3 and indices.get('ndbi', 0) > 0.1:
+            cobalt_confidence = min(0.82, 0.55 + indices['ndbi'])
+            detections.append({
+                "mineral": "Cobalt/Nickel",
+                "confidence": float(cobalt_confidence),
+                "spectral_signature": "Low vegetation, high mineral index",
+                "contributing_indices": ["ndvi", "ndbi"],
+                "wavelength_features": [490, 705, 1610]
+            })
+            logger.info(f"  ✓ Cobalt/Nickel: {cobalt_confidence:.2f}")
+        
+        # Lithium signature (very bright, low vegetation)
+        if mean_reflectance > 0.25 and indices.get('ndvi', 0) < 0.2:
+            lithium_confidence = min(0.78, 0.5 + (mean_reflectance - 0.20) * 1.5)
+            detections.append({
+                "mineral": "Lithium (bright alteration)",
+                "confidence": float(lithium_confidence),
+                "spectral_signature": "Very high reflectance, altered terrane",
+                "contributing_indices": ["bright_reflectance", "low_ndvi"],
+                "wavelength_features": [560, 665, 840]
+            })
+            logger.info(f"  ✓ Lithium: {lithium_confidence:.2f}")
         
         # Sort detections by confidence
         detections.sort(key=lambda x: x.get("confidence", 0), reverse=True)
         
-        if not detections:
-            logger.warning("⚠️ No mineral signatures detected")
-        else:
+        if detections:
             logger.info(f"✓ Detected {len(detections)} potential minerals")
+        else:
+            logger.warning("⚠️ No mineral signatures detected (may indicate baseline/non-mineralized area)")
         
         return {
             "status": "success",
             "detections": detections,
             "spectral_indices": indices,
-            "parameters_analyzed": list(bands.keys()),
+            "parameters_analyzed": list(bands_dict.keys()),
             "analysis_timestamp": datetime.now().isoformat(),
             "processing_level": "Spectral",
             "metadata": {
                 "method": "Spectral signature matching",
                 "confidence_threshold": 0.50,
-                "total_detections": len(detections)
+                "total_detections": len(detections),
+                "bands_used": len([k for k in bands_dict.keys() if k.startswith('B')])
             }
         }
         
@@ -1445,7 +1530,7 @@ async def analyze_spectral_data(body: dict = None) -> Dict:
         return {
             "status": "error",
             "error": str(e),
-            "code": "ANALYSIS_ERROR"
+            "code": "SPECTRAL_ERROR"
         }
 
 
