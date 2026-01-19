@@ -173,21 +173,29 @@ async def startup_event():
     # Initialize GEE from Railway environment variable (base64 encoded JSON)
     try:
         gee_json_content = os.getenv("GEE_JSON_CONTENT")
+        logger.info(f"🔍 Checking for GEE_JSON_CONTENT environment variable: {'FOUND' if gee_json_content else 'NOT FOUND'}")
         if gee_json_content:
             try:
                 # Decode base64 JSON
+                logger.info(f"📦 GEE_JSON_CONTENT size: {len(gee_json_content)} bytes")
                 gee_json_str = base64.b64decode(gee_json_content).decode()
+                logger.info(f"✅ Successfully decoded base64 content: {len(gee_json_str)} bytes")
                 # Write to temp file
                 temp_dir = tempfile.gettempdir()
                 creds_path = os.path.join(temp_dir, "gee-credentials.json")
                 with open(creds_path, 'w') as f:
                     f.write(gee_json_str)
                 os.environ["GEE_CREDENTIALS"] = creds_path
+                logger.info(f"✓ GEE credentials written to: {creds_path}")
                 logger.info("✓ GEE credentials initialized from Railway GEE_JSON_CONTENT")
             except Exception as e:
-                logger.warning(f"⚠️ Failed to decode Railway GEE credentials: {str(e)}")
+                logger.error(f"❌ Failed to decode Railway GEE credentials: {str(e)}")
+                import traceback
+                traceback.print_exc()
+        else:
+            logger.warning("⚠️ GEE_JSON_CONTENT environment variable not found on Railway")
     except Exception as e:
-        logger.warning(f"⚠️ Railway GEE setup error: {str(e)}")
+        logger.error(f"❌ Railway GEE setup error: {str(e)}")
     
     # Initialize GEE if available
     try:
@@ -262,6 +270,54 @@ async def health_check():
         "gee": gee_status,
         "timestamp": time.time()
     }
+
+
+@app.get("/gee/diagnostics")
+async def gee_diagnostics():
+    """
+    Diagnostics endpoint for GEE initialization on Railway
+    Check: GEE_JSON_CONTENT env var, credentials file, GEE fetcher status
+    """
+    diagnostics = {
+        "timestamp": datetime.now().isoformat(),
+        "gee_json_content_env": "PRESENT" if os.getenv("GEE_JSON_CONTENT") else "MISSING",
+        "gee_credentials_env": os.getenv("GEE_CREDENTIALS", "NOT SET"),
+        "gee_initialized_flag": gee_initialized,
+        "gee_fetcher_available": gee_fetcher is not None,
+    }
+    
+    # Check if credentials file exists
+    creds_path = os.getenv("GEE_CREDENTIALS")
+    if creds_path:
+        diagnostics["credentials_file_exists"] = os.path.exists(creds_path)
+        if os.path.exists(creds_path):
+            try:
+                with open(creds_path, 'r') as f:
+                    creds_data = json.load(f)
+                    diagnostics["service_account_email"] = creds_data.get("client_email", "UNKNOWN")
+                    diagnostics["project_id"] = creds_data.get("project_id", "UNKNOWN")
+            except Exception as e:
+                diagnostics["credentials_parse_error"] = str(e)
+    
+    # Try to test GEE connection
+    if gee_fetcher and gee_initialized:
+        try:
+            logger.info("🧪 Testing GEE connection...")
+            test_data = gee_fetcher.fetch_sentinel2_data(
+                latitude=9.15,  # Busunu, Ghana
+                longitude=-1.5,
+                start_date="2024-01-01",
+                end_date="2024-12-31"
+            )
+            diagnostics["gee_connection_test"] = "SUCCESS" if test_data and "error" not in test_data else "FAILED"
+            if test_data and "error" in test_data:
+                diagnostics["gee_test_error"] = test_data.get("error")
+        except Exception as e:
+            diagnostics["gee_connection_test"] = "ERROR"
+            diagnostics["gee_test_error"] = str(e)
+    
+    logger.info(f"📊 GEE Diagnostics: {diagnostics}")
+    return diagnostics
 
 
 # ===== MINERAL DETECTION ENDPOINTS =====
@@ -1137,8 +1193,10 @@ async def fetch_satellite_data(body: dict = None) -> Dict:
         logger.info(f"📡 Satellite data requested: ({latitude}, {longitude})")
         
         # Try to fetch from GEE
+        logger.info(f"🔍 GEE status: fetcher={'YES' if gee_fetcher else 'NO'}, initialized={'YES' if gee_initialized else 'NO'}")
         if gee_fetcher and gee_initialized:
             try:
+                logger.info(f"🛰️ Attempting to fetch Sentinel-2 for ({latitude}, {longitude})")
                 spectral_data = gee_fetcher.fetch_sentinel2_data(
                     latitude=latitude,
                     longitude=longitude,
@@ -1149,13 +1207,20 @@ async def fetch_satellite_data(body: dict = None) -> Dict:
                 if spectral_data and "error" not in spectral_data:
                     logger.info("✓ Real Sentinel-2 data fetched successfully")
                     return spectral_data
+                else:
+                    logger.warning(f"⚠️ GEE returned data with error: {spectral_data}")
             except Exception as e:
-                logger.warning(f"⚠️ GEE fetch failed: {str(e)}")
+                logger.error(f"❌ GEE fetch failed: {str(e)}")
+                import traceback
+                traceback.print_exc()
+        else:
+            logger.error(f"❌ Cannot fetch satellite data: gee_fetcher={gee_fetcher}, gee_initialized={gee_initialized}")
         
         # No real data available
+        logger.error(f"❌ Returning error: Real satellite data not available for ({latitude}, {longitude})")
         return {
             "status": "error",
-            "error": "Real satellite data not available for this location/timeframe. Please configure GEE credentials.",
+            "error": "Real satellite data not available for this location/timeframe. Check Railway logs for GEE initialization errors.",
             "code": "NO_DATA_AVAILABLE",
             "coordinates": {"latitude": latitude, "longitude": longitude}
         }
