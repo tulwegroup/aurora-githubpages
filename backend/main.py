@@ -1457,6 +1457,255 @@ async def get_scan_details(scan_id: str) -> Dict:
 
 import asyncio
 
+# ================================================================
+# GROUND TRUTH VAULT (A-GTV) INTEGRATION
+# ================================================================
+
+try:
+    from .ground_truth_vault import (
+        get_vault, AuroraCommonSchema, DataTier, Mineral, 
+        ValidationStatus, MeasurementType
+    )
+    from .calibration_controller import get_calibration_controller
+    logger.info("✓ Ground Truth Vault & Calibration Controller imported")
+except ImportError as e:
+    logger.warning(f"⚠️ Could not import A-GTV: {str(e)}")
+    get_vault = None
+    get_calibration_controller = None
+
+
+@app.post("/gtv/ingest")
+async def ingest_ground_truth_record(record_data: Dict) -> Dict:
+    """
+    Ingest a single record into the Aurora Ground Truth Vault.
+    
+    Accepts:
+    {
+        "latitude": float,
+        "longitude": float,
+        "depth_m": float,
+        "measurement_type": "seismic_velocity" | "assay_ppm" | "lithology" | etc.,
+        "measurement_value": float,
+        "measurement_unit": string,
+        "lithology_code": string,
+        "mineralization_style": string,
+        "alteration_type": string,
+        "structural_control": string,
+        "source_tier": "TIER_1_PUBLIC" | "TIER_3_CLIENT" | etc.,
+        "source_organization": string,
+        "ingested_by": string
+    }
+    """
+    try:
+        if not get_vault:
+            return {
+                "error": "Ground Truth Vault not available",
+                "code": "GTV_UNAVAILABLE"
+            }
+        
+        vault = get_vault()
+        
+        # Create AuroraCommonSchema record
+        acs = AuroraCommonSchema(
+            latitude=record_data.get("latitude"),
+            longitude=record_data.get("longitude"),
+            depth_m=record_data.get("depth_m"),
+            measurement_type=record_data.get("measurement_type"),
+            measurement_value=record_data.get("measurement_value"),
+            measurement_unit=record_data.get("measurement_unit"),
+            lithology_code=record_data.get("lithology_code"),
+            mineralization_style=record_data.get("mineralization_style"),
+            alteration_type=record_data.get("alteration_type"),
+            structural_control=record_data.get("structural_control"),
+            source_tier=record_data.get("source_tier", "TIER_3_CLIENT"),
+            source_organization=record_data.get("source_organization"),
+            ingested_by=record_data.get("ingested_by", "api_user"),
+            mineral_context=record_data.get("mineral_context", {})
+        )
+        
+        record_id, success, error_msg = vault.ingest_record(acs)
+        
+        if success:
+            gtc_score = vault.calculate_gtc_score(record_id)
+            return {
+                "success": True,
+                "record_id": record_id,
+                "gtc_score": gtc_score,
+                "validation_status": "RAW",
+                "message": f"Record ingested with GTC={gtc_score:.2f}"
+            }
+        else:
+            return {
+                "error": error_msg,
+                "code": "INGESTION_FAILED"
+            }
+    
+    except Exception as e:
+        logger.error(f"❌ GTV ingestion error: {str(e)}")
+        return {"error": str(e), "code": "GTV_ERROR"}
+
+
+@app.get("/gtv/conflicts")
+async def get_gtv_conflicts() -> Dict:
+    """
+    Retrieve all detected conflicts in the Ground Truth Vault.
+    """
+    try:
+        if not get_vault:
+            return {"error": "Ground Truth Vault not available", "code": "GTV_UNAVAILABLE"}
+        
+        vault = get_vault()
+        conflicts = vault.get_conflicting_records()
+        
+        return {
+            "total_conflicts": len(conflicts),
+            "conflicts": [
+                {
+                    "record_a": c.record_a_id,
+                    "record_b": c.record_b_id,
+                    "type": c.conflict_type,
+                    "severity": c.severity_level,
+                    "delta_percent": f"{c.delta_percent:.1f}%"
+                }
+                for c in conflicts[:50]  # Limit to 50 most recent
+            ]
+        }
+    
+    except Exception as e:
+        logger.error(f"❌ Conflict query error: {str(e)}")
+        return {"error": str(e), "code": "QUERY_ERROR"}
+
+
+@app.post("/gtv/dry-hole-risk")
+async def calculate_dry_hole_risk(location_data: Dict) -> Dict:
+    """
+    Calculate dry hole probability for a proposed drilling location.
+    
+    Accepts:
+    {
+        "latitude": float,
+        "longitude": float,
+        "mineral": "Au" | "Li" | "Cu",
+        "search_radius_km": float (optional, default 5.0)
+    }
+    """
+    try:
+        if not get_vault:
+            return {"error": "Ground Truth Vault not available", "code": "GTV_UNAVAILABLE"}
+        
+        vault = get_vault()
+        
+        mineral_code = location_data.get("mineral", "Au")
+        mineral_enum = {"Au": Mineral.GOLD, "Li": Mineral.LITHIUM, "Cu": Mineral.COPPER}.get(
+            mineral_code, Mineral.GOLD
+        )
+        
+        risk_assessment = vault.calculate_dry_hole_risk(
+            target_lat=location_data.get("latitude"),
+            target_lon=location_data.get("longitude"),
+            mineral=mineral_enum,
+            search_radius_km=location_data.get("search_radius_km", 5.0)
+        )
+        
+        return {
+            "success": True,
+            "location": {
+                "latitude": location_data.get("latitude"),
+                "longitude": location_data.get("longitude")
+            },
+            "mineral": mineral_code,
+            "dry_hole_risk_percent": f"{risk_assessment['risk_percent']:.1f}%",
+            "critical_failure_mode": risk_assessment["critical_failure_mode"],
+            "recommended_action": risk_assessment["recommended_action"],
+            "data_density_nearby": risk_assessment["data_density"],
+            "structural_integrity": f"{risk_assessment['structural_integrity']:.2f}",
+            "grade_probability": f"{risk_assessment['grade_probability']:.2f}",
+            "confidence_interval_90": [
+                f"{risk_assessment['confidence_90_low']:.1f}%",
+                f"{risk_assessment['confidence_90_high']:.1f}%"
+            ],
+            "anchor_records": risk_assessment["anchor_records"]
+        }
+    
+    except Exception as e:
+        logger.error(f"❌ Dry hole risk calculation error: {str(e)}")
+        return {"error": str(e), "code": "RISK_CALC_ERROR"}
+
+
+@app.post("/gtv/calibrate")
+async def execute_system_calibration(calibration_data: Dict) -> Dict:
+    """
+    Execute full system calibration using Ground Truth Vault data.
+    
+    Applies ground truth to all Aurora sub-modules:
+    - Seismic Synthesizer (well-tie calibration)
+    - Spectral Harmonization (spectral ground-truthing)
+    - Causal Core (edge reweighting)
+    - Temporal Analytics (T-Zero reset)
+    - Quantum Engine (Hamiltonian constraints)
+    - Digital Twin (physics-based accuracy)
+    """
+    try:
+        if not get_calibration_controller:
+            return {
+                "error": "Calibration Controller not available",
+                "code": "CONTROLLER_UNAVAILABLE"
+            }
+        
+        controller = get_calibration_controller()
+        
+        # Ground truth data from vault
+        ground_truth_data = {
+            "sonic_logs": calibration_data.get("sonic_logs", []),
+            "density_logs": calibration_data.get("density_logs", []),
+            "lab_spectroscopy": calibration_data.get("lab_spectroscopy", []),
+            "assay_data": calibration_data.get("assay_data", []),
+            "borehole_coordinates": tuple(calibration_data.get("borehole_coordinates", [0, 0]))
+        }
+        
+        # Aurora models to calibrate
+        aurora_models = {
+            "seismic_synthesizer": calibration_data.get("seismic_model", {}),
+            "spectral_harmonization": calibration_data.get("spectral_model", {}),
+            "causal_core": calibration_data.get("causal_model", {})
+        }
+        
+        # Execute calibration
+        calibration_result = controller.execute_full_calibration(
+            ground_truth_data, aurora_models
+        )
+        
+        return calibration_result
+    
+    except Exception as e:
+        logger.error(f"❌ Calibration error: {str(e)}")
+        return {"error": str(e), "code": "CALIBRATION_ERROR"}
+
+
+@app.get("/gtv/status")
+async def get_gtv_status() -> Dict:
+    """
+    Get status of Ground Truth Vault and Calibration system.
+    """
+    try:
+        if not get_vault or not get_calibration_controller:
+            return {"status": "unavailable"}
+        
+        vault = get_vault()
+        controller = get_calibration_controller()
+        
+        return {
+            "gtv_status": "operational",
+            "records_ingested": len(vault.records),
+            "conflicts_detected": len(vault.conflicts),
+            "calibration_status": controller.get_calibration_status(),
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"❌ Status query error: {str(e)}")
+        return {"error": str(e), "code": "STATUS_ERROR"}
+
 
 if __name__ == "__main__":
     import uvicorn

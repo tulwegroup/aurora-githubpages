@@ -731,4 +731,128 @@ export class AuroraAPI {
       return { error: 'Real spectral data unavailable', code: 'NO_DATA' };
     }
   }
+
+  // ============================================================================
+  // GROUND TRUTH VAULT (A-GTV) API METHODS
+  // ============================================================================
+
+  /**
+   * Ingest a single record into the Aurora Ground Truth Vault
+   */
+  static async ingestGroundTruthRecord(record: {
+    latitude: number;
+    longitude: number;
+    depth_m?: number;
+    measurement_type: string;
+    measurement_value?: number;
+    measurement_unit?: string;
+    lithology_code?: string;
+    mineralization_style?: string;
+    alteration_type?: string;
+    structural_control?: string;
+    source_tier?: string;
+    source_organization?: string;
+    ingested_by?: string;
+    mineral_context?: Record<string, any>;
+  }): Promise<any> {
+    try {
+      return await this.apiFetch('/gtv/ingest', {
+        method: 'POST',
+        body: JSON.stringify(record)
+      });
+    } catch (e) {
+      return {
+        error: 'Failed to ingest ground truth record',
+        code: 'GTV_INGEST_ERROR'
+      };
+    }
+  }
+
+  /**
+   * Retrieve all conflicts detected in the Ground Truth Vault
+   */
+  static async getGroundTruthConflicts(): Promise<any> {
+    try {
+      return await this.apiFetch('/gtv/conflicts');
+    } catch (e) {
+      return {
+        error: 'Failed to retrieve conflicts',
+        code: 'CONFLICT_QUERY_ERROR',
+        total_conflicts: 0,
+        conflicts: []
+      };
+    }
+  }
+
+  /**
+   * Calculate dry hole probability for a proposed drilling location
+   */
+  static async calculateDryHoleRisk(location: {
+    latitude: number;
+    longitude: number;
+    mineral?: 'Au' | 'Li' | 'Cu';
+    search_radius_km?: number;
+  }): Promise<any> {
+    try {
+      return await this.apiFetch('/gtv/dry-hole-risk', {
+        method: 'POST',
+        body: JSON.stringify(location)
+      });
+    } catch (e) {
+      return {
+        error: 'Failed to calculate dry hole risk',
+        code: 'RISK_CALC_ERROR',
+        dry_hole_risk_percent: 'unknown'
+      };
+    }
+  }
+
+  /**
+   * Execute system-wide calibration using Ground Truth Vault data
+   * Calibrates all Aurora sub-modules:
+   * - Seismic Synthesizer (well-tie)
+   * - Spectral Harmonization (spectral ground-truthing)
+   * - Causal Core (edge reweighting)
+   * - Temporal Analytics (T-Zero reset)
+   * - Quantum Engine (Hamiltonian constraints)
+   * - Digital Twin (physics-based accuracy)
+   */
+  static async executeSystemCalibration(calibrationData: {
+    sonic_logs?: Array<Record<string, any>>;
+    density_logs?: Array<Record<string, any>>;
+    lab_spectroscopy?: Array<Record<string, any>>;
+    assay_data?: Array<Record<string, any>>;
+    borehole_coordinates?: [number, number];
+    seismic_model?: Record<string, any>;
+    spectral_model?: Record<string, any>;
+    causal_model?: Record<string, any>;
+  }): Promise<any> {
+    try {
+      return await this.apiFetch('/gtv/calibrate', {
+        method: 'POST',
+        body: JSON.stringify(calibrationData)
+      });
+    } catch (e) {
+      return {
+        error: 'Calibration execution failed',
+        code: 'CALIBRATION_ERROR',
+        overall_status: 'FAILED'
+      };
+    }
+  }
+
+  /**
+   * Get overall Ground Truth Vault and Calibration system status
+   */
+  static async getGroundTruthVaultStatus(): Promise<any> {
+    try {
+      return await this.apiFetch('/gtv/status');
+    } catch (e) {
+      return {
+        error: 'Failed to retrieve GTV status',
+        code: 'STATUS_ERROR',
+        gtv_status: 'unavailable'
+      };
+    }
+  }
 }
