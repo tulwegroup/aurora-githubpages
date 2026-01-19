@@ -290,18 +290,39 @@ class GEEDataFetcher:
             Dict with satellite data or error info
         """
         try:
+            # Use GEE integration module instead for direct API access
+            from backend.integrations.gee_integration import GEEIntegration
+            
             # Set default dates if not provided
             if not end_date:
-                end_date = datetime.now().strftime("%Y-%m-%d")
+                end_date = datetime.now().isoformat()
             if not start_date:
-                start_date = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+                start_date = (datetime.now() - timedelta(days=30)).isoformat()
             
-            # Call the native fetch_sentinel2 method
+            # Use GEE integration directly (it handles initialization)
+            result = GEEIntegration.fetch_sentinel2_data(
+                latitude=latitude,
+                longitude=longitude,
+                start_date=start_date,
+                end_date=end_date,
+                radius_m=radius_m
+            )
+            
+            if not result.get("success"):
+                logger.error(f"GEE fetch failed: {result.get('error', 'Unknown error')}")
+                return {
+                    "error": result.get("error", "Unknown error"),
+                    "code": result.get("code", "FETCH_ERROR")
+                }
+            
+            satellite_data_dict = result.get("data", {})
+            
+            # Call the native fetch_sentinel2 method for compatibility
             satellite_data = self.fetch_sentinel2(
                 latitude=latitude,
                 longitude=longitude,
-                date_start=start_date,
-                date_end=end_date,
+                date_start=start_date.split('T')[0],
+                date_end=end_date.split('T')[0],
                 radius_m=radius_m
             )
             
@@ -334,6 +355,8 @@ class GEEDataFetcher:
             
         except Exception as e:
             logger.error(f"Sentinel-2 data fetch failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return {
                 "error": f"Failed to fetch Sentinel-2 data: {str(e)}",
                 "code": "FETCH_ERROR"
