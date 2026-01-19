@@ -228,10 +228,7 @@ const MissionControl: React.FC<MissionControlProps> = ({ onSetActiveScanLocation
       await loadHistoricalScans();
     }
   };
-      console.error('Workflow error:', e);
-      setIsRunning(false);
-    }
-  };
+
 
   const updateStep = (scanId: string, stepId: string, status: ScanStep['status'], progress: number, error?: string) => {
     setActiveScan((prev) => {
