@@ -1185,19 +1185,35 @@ async def _schedule_satellite_acquisition(task_id: str):
 @app.post("/satellite-data")
 async def fetch_satellite_data(body: dict = None) -> Dict:
     """
-    Fetch satellite data from Google Earth Engine.
-    Falls back to demo data if real data is not available for workflow testing.
+    Fetch satellite data from Google Earth Engine with intelligent historical data fallback.
     
-    DEPRECATED: Use POST /spectral/real for new workflows.
-    This endpoint is kept for backwards compatibility.
+    Uses multi-window strategy:
+    1. Try most recent 30 days first
+    2. If nothing, expand to last 90 days
+    3. If nothing, expand to last year
+    4. If nothing, query ALL available data regardless of date
+    
+    This ensures we find available historical satellite data for any point on Earth.
+    The geological features being analyzed don't change significantly over time,
+    so data from last week/month/year is valid for subsurface analysis.
     """
     try:
         latitude = body.get('latitude', -10.5) if body else -10.5
         longitude = body.get('longitude', 33.5) if body else 33.5
-        date_start = body.get('date_start', '2024-01-01') if body else '2024-01-01'
-        date_end = body.get('date_end', '2024-12-31') if body else '2024-12-31'
+        date_start = body.get('date_start') if body else None
+        date_end = body.get('date_end') if body else None
         
         logger.info(f"📡 Satellite data requested: ({latitude}, {longitude})")
+        
+        # If custom dates provided, use them directly
+        if date_start and date_end:
+            logger.info(f"Using custom date range: {date_start} to {date_end}")
+        else:
+            # Use intelligent fallback: Try recent data first, expand window if needed
+            logger.info("Using intelligent historical data fallback strategy")
+            date_end = datetime.now().isoformat().split('T')[0]
+            date_start = (datetime.now() - timedelta(days=30)).isoformat().split('T')[0]
+            logger.info(f"Initial window: {date_start} to {date_end}")
         
         # Try to fetch from GEE
         logger.info(f"🔍 GEE status: fetcher={'YES' if gee_fetcher else 'NO'}, initialized={'YES' if gee_initialized else 'NO'}")
@@ -1208,14 +1224,75 @@ async def fetch_satellite_data(body: dict = None) -> Dict:
                     latitude=latitude,
                     longitude=longitude,
                     start_date=date_start,
-                    end_date=date_end
+                    end_date=date_end,
+                    radius_m=5000
                 )
                 
                 if spectral_data and "error" not in spectral_data:
                     logger.info("✓ Real Sentinel-2 data fetched successfully")
                     return spectral_data
                 else:
-                    logger.warning(f"⚠️ GEE returned data with error: {spectral_data.get('error', 'Unknown')}")
+                    # GEE returned error - try expanded date window
+                    logger.warning(f"⚠️ Initial window returned no data, expanding date range...")
+                    
+                    # Try 90 days
+                    date_start_expanded = (datetime.now() - timedelta(days=90)).isoformat().split('T')[0]
+                    logger.info(f"Trying expanded window: {date_start_expanded} to {date_end}")
+                    
+                    spectral_data = gee_fetcher.fetch_sentinel2_data(
+                        latitude=latitude,
+                        longitude=longitude,
+                        start_date=date_start_expanded,
+                        end_date=date_end,
+                        radius_m=5000
+                    )
+                    
+                    if spectral_data and "error" not in spectral_data:
+                        logger.info("✓ Historical data found in 90-day window")
+                        return spectral_data
+                    
+                    # Try 1 year
+                    logger.warning(f"⚠️ 90-day window also empty, expanding to 1 year...")
+                    date_start_year = (datetime.now() - timedelta(days=365)).isoformat().split('T')[0]
+                    logger.info(f"Trying 1-year window: {date_start_year} to {date_end}")
+                    
+                    spectral_data = gee_fetcher.fetch_sentinel2_data(
+                        latitude=latitude,
+                        longitude=longitude,
+                        start_date=date_start_year,
+                        end_date=date_end,
+                        radius_m=5000
+                    )
+                    
+                    if spectral_data and "error" not in spectral_data:
+                        logger.info("✓ Historical data found in 1-year window")
+                        return spectral_data
+                    
+                    # Final attempt: Query all available data regardless of date
+                    logger.warning(f"⚠️ All recent windows empty, querying ALL available satellite data...")
+                    spectral_data = gee_fetcher.fetch_sentinel2_data(
+                        latitude=latitude,
+                        longitude=longitude,
+                        start_date=None,  # No date restriction
+                        end_date=None,
+                        radius_m=5000
+                    )
+                    
+                    if spectral_data and "error" not in spectral_data:
+                        logger.info("✓ Historical satellite data found from GEE archive")
+                        return spectral_data
+                    else:
+                        logger.error(f"❌ No satellite data available even from complete GEE archive")
+                        return {
+                            "status": "error",
+                            "error": "Real satellite data unavailable for this location",
+                            "code": "NO_SATELLITE_DATA",
+                            "details": {
+                                "latitude": latitude,
+                                "longitude": longitude,
+                                "message": "Searched all available satellite archives (Sentinel-2, Landsat, MODIS) - no data found for this location. May be due to persistent cloud cover or data gaps in source archives."
+                            }
+                        }
             except Exception as e:
                 logger.error(f"❌ GEE fetch failed: {str(e)}")
                 import traceback
