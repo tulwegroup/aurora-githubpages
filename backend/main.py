@@ -1257,15 +1257,109 @@ async def fetch_satellite_data(body: dict = None) -> Dict:
         }
 
 
+# ================================================================
+# COMMODITY FILTERING CONFIGURATION
+# ================================================================
+# Maps commodity types to their expected mineral detections
+COMMODITY_MINERAL_MAP = {
+    "HC": {  # Hydrocarbon
+        "allowed_minerals": [
+            "Crude Oil",
+            "Natural Gas", 
+            "Bitumen",
+            "Asphalt"
+        ],
+        "forbidden_minerals": ["Gold", "Copper", "Silver", "Lithium", "Cobalt", "Nickel", "Iron Oxide"],
+        "primary_indicators": ["maturation_index", "thermal_maturity", "hydrocarbon_seepage"],
+        "spectral_priority": ["low_ndvi", "stable_signatures"]
+    },
+    "Au": {  # Gold
+        "allowed_minerals": ["Gold", "Iron Oxide", "Silica", "Quartz"],
+        "forbidden_minerals": ["Lithium", "Crude Oil", "Natural Gas"],
+        "primary_indicators": ["gold_alteration", "phyllosilicates", "iron_oxide_assemblage"],
+        "spectral_priority": ["bright_reflectance", "red_absorption"]
+    },
+    "Cu": {  # Copper
+        "allowed_minerals": ["Copper", "Iron Oxide", "Molybdenum", "Gold"],
+        "forbidden_minerals": ["Lithium", "Crude Oil"],
+        "primary_indicators": ["copper_absorption", "iron_oxide_index", "ndbi"],
+        "spectral_priority": ["swir_absorption", "copper_index"]
+    },
+    "Li": {  # Lithium
+        "allowed_minerals": ["Lithium", "Clay", "Feldspar", "Mica"],
+        "forbidden_minerals": ["Crude Oil", "Gold", "Copper"],
+        "primary_indicators": ["bright_reflectance", "low_ndvi", "clay_alteration"],
+        "spectral_priority": ["very_bright", "Al-OH_absorption"]
+    },
+    "default": {
+        "allowed_minerals": ["Gold", "Copper", "Iron Oxide", "Lithium", "Cobalt", "Nickel"],
+        "forbidden_minerals": [],
+        "primary_indicators": [],
+        "spectral_priority": []
+    }
+}
+
+# Mapping from mineral names to commodity types
+MINERAL_TO_COMMODITY_MAP = {
+    "hydrocarbon": "HC",
+    "hc": "HC",
+    "gold": "Au",
+    "au": "Au",
+    "copper": "Cu",
+    "cu": "Cu",
+    "lithium": "Li",
+    "li": "Li",
+    "natural_gas": "HC",
+    "crude_oil": "HC",
+    "oil": "HC",
+    "gas": "HC",
+    "silver": "Ag",
+    "molybdenum": "Mo",
+    "cobalt": "Co",
+    "nickel": "Ni",
+}
+
+def derive_commodity_type(minerals_requested=None, commodity_type_param=None) -> str:
+    """
+    Derive commodity type from either explicit parameter or minerals_requested list.
+    Priority: explicit param > minerals_requested list > default
+    """
+    # Priority 1: Explicit commodity_type parameter
+    if commodity_type_param and commodity_type_param != "default":
+        return commodity_type_param
+    
+    # Priority 2: minerals_requested list
+    if minerals_requested and isinstance(minerals_requested, list) and len(minerals_requested) > 0:
+        # Get the first mineral and map it to commodity
+        primary_mineral = minerals_requested[0].lower().strip()
+        for mineral_key, commodity in MINERAL_TO_COMMODITY_MAP.items():
+            if mineral_key in primary_mineral:
+                logger.info(f"  🎯 Derived commodity type '{commodity}' from minerals_requested: {minerals_requested}")
+                return commodity
+    
+    # Default fallback
+    return "default"
+
+
 @app.post("/analyze-spectra")
 async def analyze_spectral_data(body: dict = None) -> Dict:
     """
     Perform spectral analysis on satellite data.
     Analyzes spectral bands and calculates indices for mineral detection.
     Handles multiple data formats from different sources.
+    Filters mineral detections based on requested commodity_type.
     """
     try:
         logger.info("📊 Spectral analysis started")
+        
+        # Extract commodity type from request
+        # Try explicit param first, then derive from minerals_requested
+        commodity_type = derive_commodity_type(
+            minerals_requested=body.get("minerals_requested") if body else None,
+            commodity_type_param=body.get("commodity_type") if body else None
+        )
+        commodity_config = COMMODITY_MINERAL_MAP.get(commodity_type, COMMODITY_MINERAL_MAP["default"])
+        logger.info(f"🎯 Spectral analysis - Commodity type: {commodity_type}, allowed minerals: {commodity_config['allowed_minerals']}")
         
         # Handle multiple input formats
         if not body:
@@ -1444,69 +1538,100 @@ async def analyze_spectral_data(body: dict = None) -> Dict:
             indices['copper_index'] = float(copper_index)
             logger.info(f"  ✓ Copper Index: {copper_index:.3f}")
         
-        logger.info(f"🔍 Detecting mineral spectral signatures...")
+        logger.info(f"🔍 Detecting mineral spectral signatures for commodity: {commodity_type}")
         
-        # Mineral detection based on spectral signatures
+        # Determine if mineral is allowed for this commodity type
+        def is_mineral_allowed(mineral_name: str) -> bool:
+            """Check if mineral detection is allowed for requested commodity"""
+            if mineral_name in commodity_config['allowed_minerals']:
+                return True
+            if mineral_name in commodity_config['forbidden_minerals']:
+                return False
+            # Check partial matches (e.g., "Gold" matches "Gold (alteration)")
+            for allowed in commodity_config['allowed_minerals']:
+                if allowed.lower() in mineral_name.lower():
+                    return True
+            for forbidden in commodity_config['forbidden_minerals']:
+                if forbidden.lower() in mineral_name.lower():
+                    return False
+            # Default: allow if not explicitly forbidden
+            return True
+        
         # Copper signature (high in SWIR, low in red)
         if indices.get('copper_index', 0) > 0.1 and indices.get('ndbi', 0) > 0:
-            copper_confidence = min(0.95, 0.7 + indices['copper_index'])
-            detections.append({
-                "mineral": "Copper",
-                "confidence": float(copper_confidence),
-                "spectral_signature": "High SWIR absorption at 1610nm",
-                "contributing_indices": ["copper_index", "ndbi"],
-                "wavelength_features": [705, 783, 842, 1610]
-            })
-            logger.info(f"  ✓ Copper: {copper_confidence:.2f}")
+            if is_mineral_allowed("Copper"):
+                copper_confidence = min(0.95, 0.7 + indices['copper_index'])
+                detections.append({
+                    "mineral": "Copper",
+                    "confidence": float(copper_confidence),
+                    "spectral_signature": "High SWIR absorption at 1610nm",
+                    "contributing_indices": ["copper_index", "ndbi"],
+                    "wavelength_features": [705, 783, 842, 1610]
+                })
+                logger.info(f"  ✓ Copper: {copper_confidence:.2f}")
+            else:
+                logger.info(f"  ⊘ Copper filtered out (not in {commodity_type} commodity)")
         
         # Iron oxide signature
         if indices.get('iron_oxide_index', 0) > 0.05:
-            iron_confidence = min(0.90, 0.65 + indices['iron_oxide_index'])
-            detections.append({
-                "mineral": "Iron Oxide (Hematite/Goethite)",
-                "confidence": float(iron_confidence),
-                "spectral_signature": "Absorption edge at red wavelengths",
-                "contributing_indices": ["iron_oxide_index", "ndbi"],
-                "wavelength_features": [560, 665, 705]
-            })
-            logger.info(f"  ✓ Iron Oxide: {iron_confidence:.2f}")
+            if is_mineral_allowed("Iron Oxide"):
+                iron_confidence = min(0.90, 0.65 + indices['iron_oxide_index'])
+                detections.append({
+                    "mineral": "Iron Oxide (Hematite/Goethite)",
+                    "confidence": float(iron_confidence),
+                    "spectral_signature": "Absorption edge at red wavelengths",
+                    "contributing_indices": ["iron_oxide_index", "ndbi"],
+                    "wavelength_features": [560, 665, 705]
+                })
+                logger.info(f"  ✓ Iron Oxide: {iron_confidence:.2f}")
+            else:
+                logger.info(f"  ⊘ Iron Oxide filtered out (not in {commodity_type} commodity)")
         
         # Gold signature (bright reflectance across bands)
         mean_reflectance = np.mean([b2, b3, b4, b5, b6, b7])
         if mean_reflectance > 0.20:
-            gold_confidence = min(0.85, 0.6 + (mean_reflectance - 0.15) * 2)
-            detections.append({
-                "mineral": "Gold (alteration)",
-                "confidence": float(gold_confidence),
-                "spectral_signature": "High reflectance across visible and NIR",
-                "contributing_indices": ["bright_reflectance"],
-                "wavelength_features": [490, 560, 665, 842]
-            })
-            logger.info(f"  ✓ Gold: {gold_confidence:.2f}")
+            if is_mineral_allowed("Gold"):
+                gold_confidence = min(0.85, 0.6 + (mean_reflectance - 0.15) * 2)
+                detections.append({
+                    "mineral": "Gold (alteration)",
+                    "confidence": float(gold_confidence),
+                    "spectral_signature": "High reflectance across visible and NIR",
+                    "contributing_indices": ["bright_reflectance"],
+                    "wavelength_features": [490, 560, 665, 842]
+                })
+                logger.info(f"  ✓ Gold: {gold_confidence:.2f}")
+            else:
+                logger.info(f"  ⊘ Gold filtered out (not in {commodity_type} commodity)")
         
         # Cobalt/Nickel signature (low NDVI, high NDBI)
         if indices.get('ndvi', 0) < 0.3 and indices.get('ndbi', 0) > 0.1:
-            cobalt_confidence = min(0.82, 0.55 + indices['ndbi'])
-            detections.append({
-                "mineral": "Cobalt/Nickel",
-                "confidence": float(cobalt_confidence),
-                "spectral_signature": "Low vegetation, high mineral index",
-                "contributing_indices": ["ndvi", "ndbi"],
-                "wavelength_features": [490, 705, 1610]
-            })
-            logger.info(f"  ✓ Cobalt/Nickel: {cobalt_confidence:.2f}")
+            if is_mineral_allowed("Cobalt/Nickel"):
+                cobalt_confidence = min(0.82, 0.55 + indices['ndbi'])
+                detections.append({
+                    "mineral": "Cobalt/Nickel",
+                    "confidence": float(cobalt_confidence),
+                    "spectral_signature": "Low vegetation, high mineral index",
+                    "contributing_indices": ["ndvi", "ndbi"],
+                    "wavelength_features": [490, 705, 1610]
+                })
+                logger.info(f"  ✓ Cobalt/Nickel: {cobalt_confidence:.2f}")
+            else:
+                logger.info(f"  ⊘ Cobalt/Nickel filtered out (not in {commodity_type} commodity)")
         
         # Lithium signature (very bright, low vegetation)
         if mean_reflectance > 0.25 and indices.get('ndvi', 0) < 0.2:
-            lithium_confidence = min(0.78, 0.5 + (mean_reflectance - 0.20) * 1.5)
-            detections.append({
-                "mineral": "Lithium (bright alteration)",
-                "confidence": float(lithium_confidence),
-                "spectral_signature": "Very high reflectance, altered terrane",
-                "contributing_indices": ["bright_reflectance", "low_ndvi"],
-                "wavelength_features": [560, 665, 840]
-            })
-            logger.info(f"  ✓ Lithium: {lithium_confidence:.2f}")
+            if is_mineral_allowed("Lithium"):
+                lithium_confidence = min(0.78, 0.5 + (mean_reflectance - 0.20) * 1.5)
+                detections.append({
+                    "mineral": "Lithium (bright alteration)",
+                    "confidence": float(lithium_confidence),
+                    "spectral_signature": "Very high reflectance, altered terrane",
+                    "contributing_indices": ["bright_reflectance", "low_ndvi"],
+                    "wavelength_features": [560, 665, 840]
+                })
+                logger.info(f"  ✓ Lithium: {lithium_confidence:.2f}")
+            else:
+                logger.info(f"  ⊘ Lithium filtered out (not in {commodity_type} commodity)")
         
         # Sort detections by confidence
         detections.sort(key=lambda x: x.get("confidence", 0), reverse=True)
@@ -1957,6 +2082,7 @@ async def run_tmal_analysis(body: dict = None) -> Dict:
     Run TMAL (Temporal Mineral Analysis and Learning) analysis.
     Analyzes temporal changes and trends in mineral signatures over time.
     Uses multi-temporal satellite imagery to detect changes and patterns.
+    Filters results based on requested commodity_type.
     """
     try:
         if not body:
@@ -1964,6 +2090,15 @@ async def run_tmal_analysis(body: dict = None) -> Dict:
         
         latitude = body.get("latitude")
         longitude = body.get("longitude")
+        
+        # Extract commodity type from request
+        # Try explicit param first, then derive from minerals_requested
+        commodity_type = derive_commodity_type(
+            minerals_requested=body.get("minerals_requested") if body else None,
+            commodity_type_param=body.get("commodity_type") if body else None
+        )
+        commodity_config = COMMODITY_MINERAL_MAP.get(commodity_type, COMMODITY_MINERAL_MAP["default"])
+        logger.info(f"🎯 TMAL - Commodity type: {commodity_type}, allowed minerals: {commodity_config['allowed_minerals']}")
         
         if not all([latitude, longitude]):
             return {
@@ -2038,23 +2173,91 @@ async def run_tmal_analysis(body: dict = None) -> Dict:
         
         # 4. Mineral evolution tracking
         # Track how detected minerals might change seasonally
-        mineral_evolution = {
-            "copper": {
-                "trend": "stable",
-                "seasonal_strength": 0.15,
-                "confidence_trend": 0.85
+        # FILTER: Only include minerals relevant to requested commodity type
+        mineral_evolution = {}
+        
+        # Define commodity-specific mineral trends
+        commodity_minerals = {
+            "HC": {
+                "maturation_index": {
+                    "trend": "increasing",
+                    "seasonal_strength": 0.08,
+                    "confidence_trend": 0.80
+                },
+                "thermal_maturity": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.05,
+                    "confidence_trend": 0.82
+                }
             },
-            "iron_oxide": {
-                "trend": "slightly_increasing",
-                "seasonal_strength": 0.08,
-                "confidence_trend": 0.80
+            "Au": {
+                "gold": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.12,
+                    "confidence_trend": 0.85
+                },
+                "iron_oxide": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.10,
+                    "confidence_trend": 0.83
+                },
+                "silica": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.08,
+                    "confidence_trend": 0.80
+                }
             },
-            "lithium": {
-                "trend": "stable",
-                "seasonal_strength": 0.12,
-                "confidence_trend": 0.82
+            "Cu": {
+                "copper": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.15,
+                    "confidence_trend": 0.85
+                },
+                "iron_oxide": {
+                    "trend": "slightly_increasing",
+                    "seasonal_strength": 0.08,
+                    "confidence_trend": 0.80
+                }
+            },
+            "Li": {
+                "lithium": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.12,
+                    "confidence_trend": 0.82
+                },
+                "clay": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.10,
+                    "confidence_trend": 0.81
+                }
+            },
+            "default": {
+                "copper": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.15,
+                    "confidence_trend": 0.85
+                },
+                "iron_oxide": {
+                    "trend": "slightly_increasing",
+                    "seasonal_strength": 0.08,
+                    "confidence_trend": 0.80
+                },
+                "lithium": {
+                    "trend": "stable",
+                    "seasonal_strength": 0.12,
+                    "confidence_trend": 0.82
+                }
             }
         }
+        
+        # Get minerals for this commodity type
+        minerals_for_commodity = commodity_minerals.get(commodity_type, commodity_minerals["default"])
+        mineral_evolution = minerals_for_commodity.copy()
+        
+        logger.info(f"  ✓ Mineral evolution includes: {list(mineral_evolution.keys())}")
+        
+        if commodity_type != "default":
+            logger.info(f"  ⊘ Filtered to commodity-specific minerals for {commodity_type}")
         
         # 5. Learning insights
         learning_insights = []
@@ -2295,6 +2498,7 @@ async def store_scan_results(body: dict = None) -> Dict:
     """
     Store scan results and all analysis outputs to database.
     Persists final scan data with satellite, spectral, PINN, USHE, and TMAL outputs.
+    ALSO: Filters spectral/TMAL results based on commodity_type or minerals_requested.
     """
     try:
         if not body:
@@ -2309,6 +2513,82 @@ async def store_scan_results(body: dict = None) -> Dict:
         timestamp = datetime.now().isoformat()
         
         logger.info(f"  Scan: '{scan_name}' at ({latitude}, {longitude})")
+        
+        # IMPORTANT: Extract commodity type from scan metadata
+        minerals_requested = body.get("minerals_requested", [])
+        commodity_type = body.get("commodity_type", "default")
+        
+        # If no explicit commodity but minerals are listed, derive it
+        if commodity_type == "default" and minerals_requested:
+            commodity_type = derive_commodity_type(minerals_requested=minerals_requested)
+            logger.info(f"  📍 Derived commodity type from minerals_requested: {commodity_type}")
+        
+        logger.info(f"  🎯 Commodity type for filtering: {commodity_type}")
+        
+        # Filter spectral results if present
+        if body.get("spectral"):
+            spectral_data = body["spectral"]
+            if "detections" in spectral_data and commodity_type != "default":
+                commodity_config = COMMODITY_MINERAL_MAP.get(commodity_type, COMMODITY_MINERAL_MAP["default"])
+                original_count = len(spectral_data["detections"])
+                
+                # Filter detections
+                filtered_detections = []
+                for detection in spectral_data["detections"]:
+                    mineral_name = detection.get("mineral", "")
+                    # Check if mineral is allowed for this commodity
+                    is_allowed = mineral_name in commodity_config['allowed_minerals']
+                    if not is_allowed:
+                        # Check partial matches
+                        for allowed in commodity_config['allowed_minerals']:
+                            if allowed.lower() in mineral_name.lower():
+                                is_allowed = True
+                                break
+                    
+                    if not is_allowed:
+                        # Check if explicitly forbidden
+                        for forbidden in commodity_config['forbidden_minerals']:
+                            if forbidden.lower() in mineral_name.lower():
+                                is_allowed = False
+                                break
+                    
+                    if is_allowed:
+                        filtered_detections.append(detection)
+                    else:
+                        logger.info(f"  ⊘ Filtered out '{mineral_name}' (not in {commodity_type} commodity)")
+                
+                spectral_data["detections"] = filtered_detections
+                body["spectral"] = spectral_data
+                logger.info(f"  ✓ Spectral filtering: {original_count} → {len(filtered_detections)} detections")
+        
+        # Filter TMAL mineral_evolution if present
+        if body.get("tmal") and body["tmal"].get("evidence"):
+            tmal_data = body["tmal"]["evidence"]
+            if "mineral_evolution" in tmal_data and commodity_type != "default":
+                commodity_config = COMMODITY_MINERAL_MAP.get(commodity_type, COMMODITY_MINERAL_MAP["default"])
+                
+                # Get allowed minerals for this commodity from our map
+                commodity_minerals = {
+                    "HC": ["maturation_index", "thermal_maturity"],
+                    "Au": ["gold", "iron_oxide", "silica"],
+                    "Cu": ["copper", "iron_oxide"],
+                    "Li": ["lithium", "clay"]
+                }
+                
+                allowed_minerals_list = commodity_minerals.get(commodity_type, [])
+                original_count = len(tmal_data["mineral_evolution"])
+                
+                # Filter mineral_evolution
+                filtered_evolution = {}
+                for mineral_name, mineral_data in tmal_data["mineral_evolution"].items():
+                    if mineral_name.lower() in [m.lower() for m in allowed_minerals_list]:
+                        filtered_evolution[mineral_name] = mineral_data
+                    else:
+                        logger.info(f"  ⊘ Filtered out '{mineral_name}' from TMAL (not in {commodity_type} commodity)")
+                
+                tmal_data["mineral_evolution"] = filtered_evolution
+                body["tmal"]["evidence"] = tmal_data
+                logger.info(f"  ✓ TMAL filtering: {original_count} → {len(filtered_evolution)} minerals")
         
         # Collect what analyses were completed
         analyses_completed = {
@@ -2329,6 +2609,8 @@ async def store_scan_results(body: dict = None) -> Dict:
             "latitude": float(latitude),
             "longitude": float(longitude),
             "timestamp": timestamp,
+            "commodity_type": commodity_type,
+            "minerals_requested": minerals_requested,
             "analyses_completed": analyses_completed,
             "completion_count": completed_count,
             "results_available": {
@@ -2370,11 +2652,12 @@ async def store_scan_results(body: dict = None) -> Dict:
         findings_summary = {
             "minerals_detected": len(detections),
             "top_minerals": [d.get("mineral") for d in detections[:3]] if detections else [],
-            "confidence_average": sum(d.get("confidence", 0) for d in detections) / len(detections) if detections else 0
+            "confidence_average": sum(d.get("confidence", 0) for d in detections) / len(detections) if detections else 0,
+            "commodity_type_applied": commodity_type
         }
         
         logger.info(f"✓ Scan storage complete")
-        logger.info(f"  Key findings: {len(detections)} minerals detected, avg confidence: {findings_summary['confidence_average']:.2f}")
+        logger.info(f"  Key findings: {len(detections)} minerals detected (after commodity filtering), avg confidence: {findings_summary['confidence_average']:.2f}")
         
         return {
             "status": "success",
@@ -2384,7 +2667,8 @@ async def store_scan_results(body: dict = None) -> Dict:
                 "timestamp": timestamp,
                 "record_type": "complete_scan",
                 "analyses_count": completed_count,
-                "data_persisted": True
+                "data_persisted": True,
+                "commodity_filtering_applied": commodity_type != "default"
             },
             "next_steps": [
                 "View scan results in Historical Scans",
@@ -2405,6 +2689,114 @@ async def store_scan_results(body: dict = None) -> Dict:
             "partial_success": True
         }
 
+
+
+@app.post("/scans/filter-by-commodity")
+async def filter_scan_by_commodity(body: dict = None) -> Dict:
+    """
+    Filter scan results by commodity type.
+    Takes existing scan data and filters spectral/TMAL results to only show
+    minerals/indices relevant to the requested commodity.
+    
+    This is useful for re-interpreting historical scans with specific commodity focus.
+    
+    Request Body:
+    {
+        "scan_data": { ...full scan JSON... },
+        "commodity_type": "HC" | "Au" | "Cu" | "Li"  (optional - can also use minerals_requested)
+        "minerals_requested": ["Hydrocarbon"] (optional)
+    }
+    """
+    try:
+        if not body or "scan_data" not in body:
+            return {"error": "Missing scan_data in request body", "code": "INVALID_REQUEST"}
+        
+        scan_data = body["scan_data"].copy() if isinstance(body["scan_data"], dict) else body["scan_data"]
+        
+        # Determine commodity type
+        commodity_type = derive_commodity_type(
+            minerals_requested=body.get("minerals_requested"),
+            commodity_type_param=body.get("commodity_type")
+        )
+        
+        commodity_config = COMMODITY_MINERAL_MAP.get(commodity_type, COMMODITY_MINERAL_MAP["default"])
+        logger.info(f"🔄 Filtering scan results for commodity: {commodity_type}")
+        
+        # Filter componentReports if present (for JSON format scans)
+        if "componentReports" in scan_data:
+            for component in scan_data["componentReports"]:
+                if component.get("component") == "Spectral" and component.get("evidence"):
+                    evidence = component["evidence"]
+                    if "detections" in evidence:
+                        original_count = len(evidence["detections"])
+                        filtered = []
+                        for det in evidence["detections"]:
+                            mineral = det.get("mineral", "")
+                            is_allowed = False
+                            
+                            # Check if in allowed list
+                            for allowed in commodity_config['allowed_minerals']:
+                                if allowed.lower() in mineral.lower():
+                                    is_allowed = True
+                                    break
+                            
+                            # Check if explicitly forbidden
+                            if is_allowed:
+                                for forbidden in commodity_config['forbidden_minerals']:
+                                    if forbidden.lower() in mineral.lower():
+                                        is_allowed = False
+                                        break
+                            
+                            if is_allowed:
+                                filtered.append(det)
+                        
+                        evidence["detections"] = filtered
+                        logger.info(f"  ✓ Spectral: {original_count} → {len(filtered)} detections")
+                
+                elif component.get("component") == "TMAL" and component.get("evidence"):
+                    evidence = component["evidence"]
+                    if "mineral_evolution" in evidence:
+                        original_count = len(evidence["mineral_evolution"])
+                        
+                        allowed_minerals_map = {
+                            "HC": ["maturation_index", "thermal_maturity"],
+                            "Au": ["gold", "iron_oxide", "silica"],
+                            "Cu": ["copper", "iron_oxide"],
+                            "Li": ["lithium", "clay"]
+                        }
+                        
+                        allowed_list = allowed_minerals_map.get(commodity_type, [])
+                        filtered_evolution = {}
+                        
+                        for mineral, data in evidence["mineral_evolution"].items():
+                            if mineral.lower() in [m.lower() for m in allowed_list]:
+                                filtered_evolution[mineral] = data
+                        
+                        evidence["mineral_evolution"] = filtered_evolution
+                        logger.info(f"  ✓ TMAL: {original_count} → {len(filtered_evolution)} minerals")
+        
+        logger.info(f"✓ Scan filtering complete for commodity: {commodity_type}")
+        
+        return {
+            "status": "success",
+            "commodity_type": commodity_type,
+            "filtered_scan": scan_data,
+            "summary": {
+                "filtering_applied": commodity_type != "default",
+                "original_commodity_context": body.get("commodity_type", "unknown"),
+                "minerals_requested": body.get("minerals_requested", [])
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Scan filtering error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "error",
+            "error": str(e),
+            "code": "FILTER_ERROR"
+        }
 
 
 @app.post("/scans/create")

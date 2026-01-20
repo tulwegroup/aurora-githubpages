@@ -654,22 +654,22 @@ export class AuroraAPI {
     }
   }
 
-  static async runUSHEAnalysis(spectralData: any): Promise<any> {
+  static async runUSHEAnalysis(spectralData: any, mineralsRequested?: string[]): Promise<any> {
     try {
       return await this.apiFetch('/ushe/analyze', {
         method: 'POST',
-        body: JSON.stringify({ spectral_data: spectralData })
+        body: JSON.stringify({ spectral_data: spectralData, minerals_requested: mineralsRequested })
       });
     } catch (e) {
       return { error: 'USHE harmonization failed - real data unavailable', code: 'USHE_ERROR' };
     }
   }
 
-  static async runTMALAnalysis(lat: number, lon: number): Promise<any> {
+  static async runTMALAnalysis(lat: number, lon: number, mineralsRequested?: string[]): Promise<any> {
     try {
       return await this.apiFetch('/tmal/analyze', {
         method: 'POST',
-        body: JSON.stringify({ latitude: lat, longitude: lon })
+        body: JSON.stringify({ latitude: lat, longitude: lon, minerals_requested: mineralsRequested })
       });
     } catch (e) {
       return { error: 'TMAL temporal analysis failed - real data unavailable', code: 'TMAL_ERROR' };
@@ -701,6 +701,22 @@ export class AuroraAPI {
       });
     } catch (e) {
       return { error: 'Failed to store scan results in database', code: 'STORAGE_ERROR' };
+    }
+  }
+
+  static async filterScanByCommodity(scanData: any, commodityType: string, mineralsRequested?: string[]): Promise<any> {
+    try {
+      return await this.apiFetch('/scans/filter-by-commodity', {
+        method: 'POST',
+        body: JSON.stringify({
+          scan_data: scanData,
+          commodity_type: commodityType,
+          minerals_requested: mineralsRequested
+        })
+      });
+    } catch (e) {
+      console.error('Scan filtering error:', e);
+      return { error: 'Failed to filter scan by commodity', code: 'FILTER_ERROR' };
     }
   }
 
