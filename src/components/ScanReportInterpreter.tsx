@@ -80,23 +80,23 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-900/50 rounded p-4 border border-blue-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Basement Depth</p>
-              <p className="text-2xl font-bold text-blue-300">{pinnData?.subsurface_properties?.basement_depth_km?.toFixed(2)} km</p>
-              <p className="text-xs text-slate-400 mt-1">±{pinnData?.subsurface_properties?.basement_depth_uncertainty_km?.toFixed(2)} km</p>
+              <p className="text-2xl font-bold text-blue-300">{typeof pinnData?.subsurface_properties?.basement_depth_km === 'number' ? pinnData.subsurface_properties.basement_depth_km.toFixed(2) : 'N/A'} km</p>
+              <p className="text-xs text-slate-400 mt-1">±{typeof pinnData?.subsurface_properties?.basement_depth_uncertainty_km === 'number' ? pinnData.subsurface_properties.basement_depth_uncertainty_km.toFixed(2) : 'N/A'} km</p>
             </div>
             <div className="bg-slate-900/50 rounded p-4 border border-blue-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Thermal Gradient</p>
-              <p className="text-2xl font-bold text-orange-300">{pinnData?.subsurface_properties?.thermal_gradient_K_per_km?.toFixed(1)} K/km</p>
-              <p className="text-xs text-slate-400 mt-1">Anomaly: +{pinnData?.subsurface_properties?.thermal_anomaly_celsius?.toFixed(1)}°C</p>
+              <p className="text-2xl font-bold text-orange-300">{typeof pinnData?.subsurface_properties?.thermal_gradient_K_per_km === 'number' ? pinnData.subsurface_properties.thermal_gradient_K_per_km.toFixed(1) : 'N/A'} K/km</p>
+              <p className="text-xs text-slate-400 mt-1">Anomaly: +{typeof pinnData?.subsurface_properties?.thermal_anomaly_celsius === 'number' ? pinnData.subsurface_properties.thermal_anomaly_celsius.toFixed(1) : 'N/A'}°C</p>
             </div>
             <div className="bg-slate-900/50 rounded p-4 border border-blue-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Porosity</p>
-              <p className="text-2xl font-bold text-cyan-300">{(pinnData?.subsurface_properties?.porosity_percent || 0).toFixed(1)}%</p>
-              <p className="text-xs text-slate-400 mt-1">Fraction: {pinnData?.subsurface_properties?.porosity_fraction?.toFixed(3)}</p>
+              <p className="text-2xl font-bold text-cyan-300">{(typeof pinnData?.subsurface_properties?.porosity_percent === 'number' ? pinnData.subsurface_properties.porosity_percent : 0).toFixed(1)}%</p>
+              <p className="text-xs text-slate-400 mt-1">Fraction: {typeof pinnData?.subsurface_properties?.porosity_fraction === 'number' ? pinnData.subsurface_properties.porosity_fraction.toFixed(3) : 'N/A'}</p>
             </div>
             <div className="bg-slate-900/50 rounded p-4 border border-blue-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Permeability</p>
-              <p className="text-lg font-bold text-green-300">10^{pinnData?.subsurface_properties?.permeability_log10_m2?.toFixed(1)} m²</p>
-              <p className="text-xs text-slate-400 mt-1">{pinnData?.subsurface_properties?.permeability_m2?.toExponential(2)} m²</p>
+              <p className="text-lg font-bold text-green-300">10^{typeof pinnData?.subsurface_properties?.permeability_log10_m2 === 'number' ? pinnData.subsurface_properties.permeability_log10_m2.toFixed(1) : 'N/A'} m²</p>
+              <p className="text-xs text-slate-400 mt-1">{typeof pinnData?.subsurface_properties?.permeability_m2 === 'number' ? pinnData.subsurface_properties.permeability_m2.toExponential(2) : 'N/A'} m²</p>
             </div>
           </div>
 
@@ -154,19 +154,19 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-900/50 rounded p-4 border border-cyan-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Sensor Consistency</p>
-              <p className="text-2xl font-bold text-cyan-300">{(usheData?.harmonization_quality?.sensor_consistency * 100).toFixed(0)}%</p>
+              <p className="text-2xl font-bold text-cyan-300">{typeof usheData?.harmonization_quality?.sensor_consistency === 'number' ? (usheData.harmonization_quality.sensor_consistency * 100).toFixed(0) : 'N/A'}%</p>
             </div>
             <div className="bg-slate-900/50 rounded p-4 border border-cyan-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Signal Quality</p>
-              <p className="text-2xl font-bold text-cyan-300">{(usheData?.harmonization_quality?.spectral_signal_quality * 100).toFixed(0)}%</p>
+              <p className="text-2xl font-bold text-cyan-300">{typeof usheData?.harmonization_quality?.spectral_signal_quality === 'number' ? (usheData.harmonization_quality.spectral_signal_quality * 100).toFixed(0) : 'N/A'}%</p>
             </div>
             <div className="bg-slate-900/50 rounded p-4 border border-cyan-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Calibration Accuracy</p>
-              <p className="text-2xl font-bold text-cyan-300">{(usheData?.harmonization_quality?.calibration_accuracy * 100).toFixed(0)}%</p>
+              <p className="text-2xl font-bold text-cyan-300">{typeof usheData?.harmonization_quality?.calibration_accuracy === 'number' ? (usheData.harmonization_quality.calibration_accuracy * 100).toFixed(0) : 'N/A'}%</p>
             </div>
             <div className="bg-slate-900/50 rounded p-4 border border-cyan-700/50">
               <p className="text-xs text-slate-500 uppercase mb-2">Overall Quality</p>
-              <p className="text-2xl font-bold text-cyan-300">{(usheData?.harmonization_quality?.overall_harmonization_quality * 100).toFixed(0)}%</p>
+              <p className="text-2xl font-bold text-cyan-300">{typeof usheData?.harmonization_quality?.overall_harmonization_quality === 'number' ? (usheData.harmonization_quality.overall_harmonization_quality * 100).toFixed(0) : 'N/A'}%</p>
             </div>
           </div>
 
@@ -175,7 +175,7 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
             {Object.entries(usheData?.sensor_metadata?.cross_sensor_calibration || {}).map(([sensor, accuracy]: [string, any]) => (
               <div key={sensor} className="flex items-center justify-between text-sm mb-2">
                 <span className="text-slate-300 capitalize">{sensor}</span>
-                <span className="text-cyan-300 font-bold">{(accuracy * 100).toFixed(1)}%</span>
+                <span className="text-cyan-300 font-bold">{typeof accuracy === 'number' ? (accuracy * 100).toFixed(1) : 'N/A'}%</span>
               </div>
             ))}
           </div>
@@ -203,16 +203,16 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-slate-500 uppercase mb-1">NDVI Trend</p>
-                <p className="text-lg font-bold text-green-300">+{tamlData?.trend_analysis?.ndvi_trend?.toFixed(4)}</p>
-                <p className="text-xs text-slate-400">{tamlData?.trend_analysis?.trend_direction}</p>
+                <p className="text-lg font-bold text-green-300">+{typeof tamlData?.trend_analysis?.ndvi_trend === 'number' ? tamlData.trend_analysis.ndvi_trend.toFixed(4) : 'N/A'}</p>
+                <p className="text-xs text-slate-400">{tamlData?.trend_analysis?.trend_direction || 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase mb-1">NDBI Trend</p>
-                <p className="text-lg font-bold text-orange-300">+{tamlData?.trend_analysis?.ndbi_trend?.toFixed(4)}</p>
+                <p className="text-lg font-bold text-orange-300">+{typeof tamlData?.trend_analysis?.ndbi_trend === 'number' ? tamlData.trend_analysis.ndbi_trend.toFixed(4) : 'N/A'}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase mb-1">NDMI Trend</p>
-                <p className="text-lg font-bold text-blue-300">+{tamlData?.trend_analysis?.ndmi_trend?.toFixed(4)}</p>
+                <p className="text-lg font-bold text-blue-300">+{typeof tamlData?.trend_analysis?.ndmi_trend === 'number' ? tamlData.trend_analysis.ndmi_trend.toFixed(4) : 'N/A'}</p>
               </div>
             </div>
           </div>
@@ -226,8 +226,8 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
                   <span className="text-xs bg-emerald-900/50 border border-emerald-700 px-2 py-1 rounded text-emerald-300">{data.trend}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                  <div><span className="text-slate-500">Seasonal Strength:</span> <span className="text-emerald-300">{(data.seasonal_strength * 100).toFixed(0)}%</span></div>
-                  <div><span className="text-slate-500">Confidence:</span> <span className="text-emerald-300">{(data.confidence_trend * 100).toFixed(0)}%</span></div>
+                  <div><span className="text-slate-500">Seasonal Strength:</span> <span className="text-emerald-300">{typeof data.seasonal_strength === 'number' ? (data.seasonal_strength * 100).toFixed(0) : 'N/A'}%</span></div>
+                  <div><span className="text-slate-500">Confidence:</span> <span className="text-emerald-300">{typeof data.confidence_trend === 'number' ? (data.confidence_trend * 100).toFixed(0) : 'N/A'}%</span></div>
                 </div>
               </div>
             ))}
@@ -265,7 +265,7 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
                     <p className="text-xs text-slate-400">{detection.spectral_signature}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-purple-400">{(detection.confidence * 100).toFixed(1)}%</p>
+                    <p className="text-2xl font-bold text-purple-400">{typeof detection.confidence === 'number' ? (detection.confidence * 100).toFixed(1) : 'N/A'}%</p>
                     <p className="text-xs text-slate-400">Confidence</p>
                   </div>
                 </div>
