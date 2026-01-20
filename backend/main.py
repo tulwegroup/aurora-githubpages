@@ -172,12 +172,15 @@ async def startup_event():
     # Initialize GEE from Railway environment variable (base64 encoded JSON)
     try:
         gee_json_content = os.getenv("GEE_JSON_CONTENT")
+        print(f"[STARTUP] 🔍 GEE_JSON_CONTENT check: {'FOUND' if gee_json_content else 'NOT FOUND'}")
         logger.info(f"🔍 Checking for GEE_JSON_CONTENT environment variable: {'FOUND' if gee_json_content else 'NOT FOUND'}")
         if gee_json_content:
             try:
                 # Decode base64 JSON
+                print(f"[STARTUP] 📦 GEE_JSON_CONTENT size: {len(gee_json_content)} bytes")
                 logger.info(f"📦 GEE_JSON_CONTENT size: {len(gee_json_content)} bytes")
                 gee_json_str = base64.b64decode(gee_json_content).decode()
+                print(f"[STARTUP] ✅ Successfully decoded base64: {len(gee_json_str)} bytes")
                 logger.info(f"✅ Successfully decoded base64 content: {len(gee_json_str)} bytes")
                 # Write to temp file
                 temp_dir = tempfile.gettempdir()
@@ -185,33 +188,44 @@ async def startup_event():
                 with open(creds_path, 'w') as f:
                     f.write(gee_json_str)
                 os.environ["GEE_CREDENTIALS"] = creds_path
+                print(f"[STARTUP] ✓ GEE credentials written to: {creds_path}")
                 logger.info(f"✓ GEE credentials written to: {creds_path}")
                 logger.info("✓ GEE credentials initialized from Railway GEE_JSON_CONTENT")
             except Exception as e:
+                print(f"[STARTUP] ❌ Failed to decode Railway GEE credentials: {str(e)}")
                 logger.error(f"❌ Failed to decode Railway GEE credentials: {str(e)}")
                 import traceback
                 traceback.print_exc()
         else:
+            print(f"[STARTUP] ⚠️ GEE_JSON_CONTENT environment variable not found")
             logger.warning("⚠️ GEE_JSON_CONTENT environment variable not found on Railway")
     except Exception as e:
+        print(f"[STARTUP] ❌ Railway GEE setup error: {str(e)}")
         logger.error(f"❌ Railway GEE setup error: {str(e)}")
     
     # NOW initialize GEE Fetcher after credentials are ready
     try:
+        print(f"[STARTUP] gee_fetcher status before init: {gee_fetcher}")
         if gee_fetcher is None:
+            print(f"[STARTUP] 📡 Initializing GEE Data Fetcher at startup...")
             logger.info("📡 Initializing GEE Data Fetcher at startup...")
             gee_fetcher = GEEDataFetcher()
+            print(f"[STARTUP] ✅ GEE Data Fetcher initialized successfully")
             logger.info("✅ GEE Data Fetcher initialized successfully at startup")
         
         if gee_fetcher:
             gee_initialized = True
+            print(f"[STARTUP] ✅ GEE initialized and ready")
             logger.info("✅ GEE initialized and ready for satellite queries")
         else:
+            print(f"[STARTUP] ⚠️ GEE fetcher is still None")
             logger.warning("⚠️ GEE fetcher not available")
             gee_initialized = False
     except Exception as e:
+        print(f"[STARTUP] ❌ GEE initialization failed: {str(e)}")
         logger.error(f"❌ GEE initialization failed during startup: {str(e)}")
         import traceback
+        print(traceback.format_exc())
         traceback.print_exc()
         gee_fetcher = None
         gee_initialized = False
