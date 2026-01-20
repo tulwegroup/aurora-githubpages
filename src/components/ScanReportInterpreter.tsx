@@ -24,12 +24,12 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
   // Extract key findings from reports
   const pinnReport = report.componentReports.find(r => r.component === 'PINN');
   const usheReport = report.componentReports.find(r => r.component === 'USHE');
-  const tmalReport = report.componentReports.find(r => r.component === 'TMAL');
-  const spectralReport = report.componentReports.find(r => r.component === 'Spectral' || r.component === 'SPECTRAL');
+  const tamlReport = report.componentReports.find(r => r.component === 'TAML');
+  const spectralReport = report.componentReports.find(r => r.component === 'USHE');
 
   const pinnData = pinnReport?.evidence as any;
   const usheData = usheReport?.evidence as any;
-  const tmalData = tmalReport?.evidence as any;
+  const tamlData = tamlReport?.evidence as any;
   const spectralData = spectralReport?.evidence as any;
 
   // ============= TECHNICAL VIEW =============
@@ -203,23 +203,23 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <p className="text-xs text-slate-500 uppercase mb-1">NDVI Trend</p>
-                <p className="text-lg font-bold text-green-300">+{tmalData?.trend_analysis?.ndvi_trend?.toFixed(4)}</p>
-                <p className="text-xs text-slate-400">{tmalData?.trend_analysis?.trend_direction}</p>
+                <p className="text-lg font-bold text-green-300">+{tamlData?.trend_analysis?.ndvi_trend?.toFixed(4)}</p>
+                <p className="text-xs text-slate-400">{tamlData?.trend_analysis?.trend_direction}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase mb-1">NDBI Trend</p>
-                <p className="text-lg font-bold text-orange-300">+{tmalData?.trend_analysis?.ndbi_trend?.toFixed(4)}</p>
+                <p className="text-lg font-bold text-orange-300">+{tamlData?.trend_analysis?.ndbi_trend?.toFixed(4)}</p>
               </div>
               <div>
                 <p className="text-xs text-slate-500 uppercase mb-1">NDMI Trend</p>
-                <p className="text-lg font-bold text-blue-300">+{tmalData?.trend_analysis?.ndmi_trend?.toFixed(4)}</p>
+                <p className="text-lg font-bold text-blue-300">+{tamlData?.trend_analysis?.ndmi_trend?.toFixed(4)}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-slate-900/30 rounded p-4 border border-slate-700">
             <p className="text-sm font-bold text-white mb-3">Mineral Evolution & Confidence</p>
-            {Object.entries(tmalData?.mineral_evolution || {}).map(([mineral, data]: [string, any]) => (
+            {Object.entries(tamlData?.mineral_evolution || {}).map(([mineral, data]: [string, any]) => (
               <div key={mineral} className="mb-3 pb-3 border-b border-slate-700 last:border-0">
                 <div className="flex justify-between items-start">
                   <span className="text-slate-300 capitalize font-semibold">{mineral.replace(/_/g, ' ')}</span>
@@ -235,7 +235,7 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
 
           <div className="bg-slate-900/30 rounded p-4 border border-slate-700">
             <p className="text-sm font-bold text-white mb-3">Key Learning Insights</p>
-            {tmalData?.learning_insights?.map((insight: any, idx: number) => (
+            {tamlData?.learning_insights?.map((insight: any, idx: number) => (
               <div key={idx} className="mb-3 p-2 bg-slate-800/50 rounded border border-slate-700">
                 <p className="text-xs font-bold text-emerald-300 uppercase mb-1">{insight.type.replace(/_/g, ' ')}</p>
                 <p className="text-xs text-slate-300">{insight.description}</p>
