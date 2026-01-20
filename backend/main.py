@@ -41,6 +41,10 @@ from fastapi.responses import JSONResponse
 import sys
 import time
 import numpy as np
+
+# ===== IMMEDIATE DIAGNOSTIC OUTPUT =====
+print("[AURORA-MAIN] Backend module loading...", file=sys.stderr, flush=True)
+sys.stderr.flush()
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 import logging
@@ -95,10 +99,14 @@ except Exception as e:
     scan_db = None
 try:
     from .integrations.gee_fetcher import GEEDataFetcher
+    print("[AURORA-MAIN] ✓ GEE Data Fetcher class imported successfully", file=sys.stderr, flush=True)
+    sys.stderr.flush()
     logger_temp = logging.getLogger(__name__)
     logger_temp.info("📡 GEE Data Fetcher class imported (will initialize at startup)")
     gee_fetcher = None  # Initialize at startup after credentials are ready
 except Exception as e:
+    print(f"[AURORA-MAIN] ✗ Failed to import GEE Data Fetcher: {str(e)}", file=sys.stderr, flush=True)
+    sys.stderr.flush()
     logger_temp = logging.getLogger(__name__)
     logger_temp.warning(f"⚠️ Could not import GEE Data Fetcher class: {str(e)}")
     gee_fetcher = None
