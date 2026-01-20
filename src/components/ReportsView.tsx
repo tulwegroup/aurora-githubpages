@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FileText, MapPin, Clock, Download, Eye, Archive, Filter, ChevronDown, CheckCircle, AlertCircle, Zap } from 'lucide-react';
+import { FileText, MapPin, Clock, Download, Eye, Archive, Filter, ChevronDown, CheckCircle, AlertCircle, Zap, BookOpen } from 'lucide-react';
 import { ScanHistory, ScanReport, ComponentReport } from '../types';
+import ScanReportInterpreter from './ScanReportInterpreter';
 
 interface ReportsViewProps {
   scanHistory: ScanHistory;
@@ -12,6 +13,7 @@ const ReportsView: React.FC<ReportsViewProps> = ({ scanHistory, activeScanLocati
   const [expandedReportId, setExpandedReportId] = useState<string | null>(null);
   const [filterComponent, setFilterComponent] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'name'>('date');
+  const [selectedReportForInterpretation, setSelectedReportForInterpretation] = useState<ScanReport | null>(null);
 
   const reports = scanHistory.scans || [];
 
@@ -249,6 +251,13 @@ const ReportsView: React.FC<ReportsViewProps> = ({ scanHistory, activeScanLocati
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-4 border-t border-aurora-800">
                     <button
+                      onClick={() => setSelectedReportForInterpretation(report)}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 transition-colors text-sm"
+                    >
+                      <BookOpen size={16} />
+                      <span>Interpret Report</span>
+                    </button>
+                    <button
                       onClick={() => exportReportJSON(report)}
                       className="flex-1 bg-aurora-600 hover:bg-aurora-500 text-white px-4 py-2 rounded flex items-center justify-center space-x-2 transition-colors text-sm"
                     >
@@ -288,8 +297,18 @@ const ReportsView: React.FC<ReportsViewProps> = ({ scanHistory, activeScanLocati
           </div>
         </div>
       )}
-    </div>
-  );
+
+      {/* Report Interpreter Modal */}
+      {selectedReportForInterpretation && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-aurora-950 rounded-lg shadow-2xl max-w-5xl w-full max-h-[90vh] border border-aurora-800">
+            <ScanReportInterpreter 
+              report={selectedReportForInterpretation}
+              onClose={() => setSelectedReportForInterpretation(null)}
+            />
+          </div>
+        </div>
+      )}
 };
 
 export default ReportsView;
