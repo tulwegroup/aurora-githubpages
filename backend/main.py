@@ -3064,36 +3064,44 @@ async def get_all_scans() -> List[Dict]:
     Returns empty array if database unavailable (prevents frontend crashes).
     """
     try:
-        logger.info("📜 Retrieving scan history")
+        logger.info("📜 STEP 1: Retrieving scan history")
         
+        logger.info(f"📜 STEP 2: Checking scan_db: {scan_db}")
         if not scan_db:
-            logger.warning("⚠️ Database utilities not available - returning empty history")
+            logger.warning("⚠️ scan_db is None/empty - returning empty history")
             return []
         
+        logger.info(f"📜 STEP 3: Checking for get_all_scans method")
         # Check if scan_db has the required method
         if not hasattr(scan_db, 'get_all_scans'):
             logger.warning("⚠️ Database missing get_all_scans method - returning empty history")
             return []
         
+        logger.info(f"📜 STEP 4: Calling scan_db.get_all_scans()")
         # Retrieve scans with limit and offset
         scans = scan_db.get_all_scans(limit=50, offset=0)
         
+        logger.info(f"📜 STEP 5: Got response: {type(scans)}")
         # Ensure we return a list
         if not isinstance(scans, list):
             logger.warning(f"⚠️ Database returned non-list: {type(scans)} - returning empty history")
             return []
         
-        logger.info(f"✓ Retrieved {len(scans)} scans from history")
+        logger.info(f"✓ STEP 6: Retrieved {len(scans)} scans from history")
         return scans
         
     except AttributeError as e:
-        logger.error(f"❌ Database method missing: {str(e)} - returning empty history")
+        logger.error(f"❌ AttributeError in scan history: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return []
     except TypeError as e:
-        logger.error(f"❌ Database call type error: {str(e)} - returning empty history")
+        logger.error(f"❌ TypeError in scan history: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return []
     except Exception as e:
-        logger.error(f"❌ Scan history retrieval error: {str(e)} - returning empty history")
+        logger.error(f"❌ Exception in scan history: {str(e)}")
         import traceback
         traceback.print_exc()
         return []

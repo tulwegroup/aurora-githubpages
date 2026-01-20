@@ -225,13 +225,17 @@ class ScanDatabase:
     @staticmethod
     def get_all_scans(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieve all scans with pagination"""
+        logger.info(f"🗄️ get_all_scans called: limit={limit}, offset={offset}")
         try:
             db = _get_db_manager()
+            logger.info(f"🗄️ _get_db_manager returned: {db}")
             if not db:
-                logger.warning("Database unavailable - returning empty scan list")
+                logger.warning("🗄️ Database manager returned None - returning empty list")
                 return []
             
+            logger.info(f"🗄️ Calling db.get_connection()")
             with db.get_connection() as conn:
+                logger.info(f"🗄️ Connection established, executing query")
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT id, scan_name, latitude, longitude, timestamp, overall_status, 
@@ -261,6 +265,9 @@ class ScanDatabase:
             
         except Exception as e:
             logger.error(f"✗ Failed to retrieve scans: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            logger.error(f"🗄️ Exception details: {traceback.format_exc()}")
             return []
 
     @staticmethod
