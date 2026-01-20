@@ -38,6 +38,7 @@ Multi-physics satellite fusion for planetary-scale subsurface intelligence
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import sys
 import time
 import numpy as np
 from datetime import datetime, timedelta
@@ -172,60 +173,77 @@ async def startup_event():
     # Initialize GEE from Railway environment variable (base64 encoded JSON)
     try:
         gee_json_content = os.getenv("GEE_JSON_CONTENT")
-        print(f"[STARTUP] 🔍 GEE_JSON_CONTENT check: {'FOUND' if gee_json_content else 'NOT FOUND'}")
+        msg = f"[STARTUP-GEE] 🔍 GEE_JSON_CONTENT check: {'FOUND (' + str(len(gee_json_content)) + ' bytes)' if gee_json_content else 'NOT FOUND'}\n"
+        sys.stderr.write(msg)
+        sys.stderr.flush()
         logger.info(f"🔍 Checking for GEE_JSON_CONTENT environment variable: {'FOUND' if gee_json_content else 'NOT FOUND'}")
+        
         if gee_json_content:
             try:
                 # Decode base64 JSON
-                print(f"[STARTUP] 📦 GEE_JSON_CONTENT size: {len(gee_json_content)} bytes")
+                sys.stderr.write(f"[STARTUP-GEE] 📦 Decoding base64 credentials ({len(gee_json_content)} bytes)...\n")
+                sys.stderr.flush()
                 logger.info(f"📦 GEE_JSON_CONTENT size: {len(gee_json_content)} bytes")
                 gee_json_str = base64.b64decode(gee_json_content).decode()
-                print(f"[STARTUP] ✅ Successfully decoded base64: {len(gee_json_str)} bytes")
+                sys.stderr.write(f"[STARTUP-GEE] ✅ Successfully decoded: {len(gee_json_str)} bytes\n")
+                sys.stderr.flush()
                 logger.info(f"✅ Successfully decoded base64 content: {len(gee_json_str)} bytes")
+                
                 # Write to temp file
                 temp_dir = tempfile.gettempdir()
                 creds_path = os.path.join(temp_dir, "gee-credentials.json")
                 with open(creds_path, 'w') as f:
                     f.write(gee_json_str)
                 os.environ["GEE_CREDENTIALS"] = creds_path
-                print(f"[STARTUP] ✓ GEE credentials written to: {creds_path}")
+                sys.stderr.write(f"[STARTUP-GEE] ✓ Credentials written to: {creds_path}\n")
+                sys.stderr.flush()
                 logger.info(f"✓ GEE credentials written to: {creds_path}")
-                logger.info("✓ GEE credentials initialized from Railway GEE_JSON_CONTENT")
             except Exception as e:
-                print(f"[STARTUP] ❌ Failed to decode Railway GEE credentials: {str(e)}")
+                sys.stderr.write(f"[STARTUP-GEE] ❌ Failed to decode: {str(e)}\n")
+                sys.stderr.flush()
                 logger.error(f"❌ Failed to decode Railway GEE credentials: {str(e)}")
                 import traceback
                 traceback.print_exc()
         else:
-            print(f"[STARTUP] ⚠️ GEE_JSON_CONTENT environment variable not found")
+            sys.stderr.write(f"[STARTUP-GEE] ⚠️ GEE_JSON_CONTENT environment variable NOT found\n")
+            sys.stderr.flush()
             logger.warning("⚠️ GEE_JSON_CONTENT environment variable not found on Railway")
     except Exception as e:
-        print(f"[STARTUP] ❌ Railway GEE setup error: {str(e)}")
+        sys.stderr.write(f"[STARTUP-GEE] ❌ Error: {str(e)}\n")
+        sys.stderr.flush()
         logger.error(f"❌ Railway GEE setup error: {str(e)}")
     
     # NOW initialize GEE Fetcher after credentials are ready
     try:
-        print(f"[STARTUP] gee_fetcher status before init: {gee_fetcher}")
+        sys.stderr.write(f"[STARTUP-GEE] Checking if gee_fetcher needs initialization (current: {type(gee_fetcher).__name__ if gee_fetcher else 'None'})\n")
+        sys.stderr.flush()
+        
         if gee_fetcher is None:
-            print(f"[STARTUP] 📡 Initializing GEE Data Fetcher at startup...")
+            sys.stderr.write(f"[STARTUP-GEE] 📡 Attempting to initialize GEE Data Fetcher...\n")
+            sys.stderr.flush()
             logger.info("📡 Initializing GEE Data Fetcher at startup...")
             gee_fetcher = GEEDataFetcher()
-            print(f"[STARTUP] ✅ GEE Data Fetcher initialized successfully")
+            sys.stderr.write(f"[STARTUP-GEE] ✅ GEE Data Fetcher initialized successfully\n")
+            sys.stderr.flush()
             logger.info("✅ GEE Data Fetcher initialized successfully at startup")
         
         if gee_fetcher:
             gee_initialized = True
-            print(f"[STARTUP] ✅ GEE initialized and ready")
+            sys.stderr.write(f"[STARTUP-GEE] ✅ GEE is ready for satellite queries\n")
+            sys.stderr.flush()
             logger.info("✅ GEE initialized and ready for satellite queries")
         else:
-            print(f"[STARTUP] ⚠️ GEE fetcher is still None")
+            sys.stderr.write(f"[STARTUP-GEE] ⚠️ gee_fetcher is still None\n")
+            sys.stderr.flush()
             logger.warning("⚠️ GEE fetcher not available")
             gee_initialized = False
     except Exception as e:
-        print(f"[STARTUP] ❌ GEE initialization failed: {str(e)}")
+        sys.stderr.write(f"[STARTUP-GEE] ❌ Initialization error: {str(e)}\n")
+        sys.stderr.flush()
         logger.error(f"❌ GEE initialization failed during startup: {str(e)}")
         import traceback
-        print(traceback.format_exc())
+        sys.stderr.write(f"{traceback.format_exc()}\n")
+        sys.stderr.flush()
         traceback.print_exc()
         gee_fetcher = None
         gee_initialized = False
