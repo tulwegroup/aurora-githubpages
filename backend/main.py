@@ -137,6 +137,10 @@ try:
         description="Planetary-scale Physics-Causal Quantum-Assisted Sovereign Subsurface Intelligence",
         version="3.1.0"
     )
+    
+    # IMMEDIATE STARTUP LOG - this must appear
+    sys.stderr.write("[INIT] FastAPI app created - version 3.1.0\n")
+    sys.stderr.flush()
 
     # CORS configuration
     cors_origins = settings.CORS_ORIGINS
