@@ -12,8 +12,20 @@ from .database_manager import get_db
 
 logger = logging.getLogger(__name__)
 
-# Get database manager instance
-db_manager = get_db()
+# Lazy-load database manager - don't initialize at import time
+db_manager = None
+
+def _get_db_manager():
+    """Lazy-load database manager only when needed"""
+    global db_manager
+    if db_manager is None:
+        try:
+            db_manager = get_db()
+            logger.info("✓ Database manager initialized")
+        except Exception as e:
+            logger.error(f"✗ Failed to initialize database manager: {str(e)}")
+            return None
+    return db_manager
 
 
 class ScanDatabase:
@@ -26,9 +38,13 @@ class ScanDatabase:
         Returns: {id, success, error}
         """
         try:
+            db = _get_db_manager()
+            if not db:
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
             scan_id = str(uuid.uuid4())
             
-            with db_manager.get_connection() as conn:
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         INSERT INTO scans (id, scan_name, latitude, longitude, overall_status, user_id, started_at)
@@ -49,9 +65,13 @@ class ScanDatabase:
         Returns: {id, success, error}
         """
         try:
+            db = _get_db_manager()
+            if not db:
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
             result_id = str(uuid.uuid4())
             
-            with db_manager.get_connection() as conn:
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         INSERT INTO scan_results (id, scan_id, created_at, updated_at)
@@ -72,7 +92,12 @@ class ScanDatabase:
         status: 'pending', 'running', 'completed', 'failed'
         """
         try:
-            with db_manager.get_connection() as conn:
+            db = _get_db_manager()
+            if not db:
+                logger.warning("Database unavailable for scan status update")
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     if status == 'completed':
                         cur.execute("""
@@ -101,7 +126,12 @@ class ScanDatabase:
         step: 'pinn', 'ushe', 'tmal'
         """
         try:
-            with db_manager.get_connection() as conn:
+            db = _get_db_manager()
+            if not db:
+                logger.warning("Database unavailable for step result update")
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     if status == 'completed':
                         cur.execute(f"""
@@ -130,9 +160,14 @@ class ScanDatabase:
         Returns: {id, success, error}
         """
         try:
+            db = _get_db_manager()
+            if not db:
+                logger.warning("Database unavailable for visualization creation")
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
             viz_id = str(uuid.uuid4())
             
-            with db_manager.get_connection() as conn:
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         INSERT INTO visualizations (id, scan_id, created_at, updated_at)
@@ -153,7 +188,12 @@ class ScanDatabase:
         viz_2d, viz_3d: JSON strings
         """
         try:
-            with db_manager.get_connection() as conn:
+            db = _get_db_manager()
+            if not db:
+                logger.warning("Database unavailable for visualization update")
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     if viz_2d and viz_3d:
                         cur.execute("""
@@ -186,7 +226,12 @@ class ScanDatabase:
     def get_all_scans(limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
         """Retrieve all scans with pagination"""
         try:
-            with db_manager.get_connection() as conn:
+            db = _get_db_manager()
+            if not db:
+                logger.warning("Database unavailable - returning empty scan list")
+                return []
+            
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     cur.execute("""
                         SELECT id, scan_name, latitude, longitude, timestamp, overall_status, 
@@ -222,7 +267,12 @@ class ScanDatabase:
     def get_scan_details(scan_id: str) -> Dict[str, Any]:
         """Retrieve complete scan details including results and visualizations"""
         try:
-            with db_manager.get_connection() as conn:
+            db = _get_db_manager()
+            if not db:
+                logger.warning("Database unavailable for scan details retrieval")
+                return {"error": "Database unavailable", "code": "DB_UNAVAILABLE"}
+            
+            with db.get_connection() as conn:
                 with conn.cursor() as cur:
                     # Get scan info
                     cur.execute("""
