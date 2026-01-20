@@ -95,12 +95,11 @@ except Exception as e:
 try:
     from .integrations.gee_fetcher import GEEDataFetcher
     logger_temp = logging.getLogger(__name__)
-    logger_temp.info("📡 Initializing GEE Data Fetcher...")
-    gee_fetcher = GEEDataFetcher()
-    logger_temp.info("✓ GEE Data Fetcher initialized successfully")
+    logger_temp.info("📡 GEE Data Fetcher class imported (will initialize at startup)")
+    gee_fetcher = None  # Initialize at startup after credentials are ready
 except Exception as e:
     logger_temp = logging.getLogger(__name__)
-    logger_temp.warning(f"⚠️ Could not import GEE Data Fetcher: {str(e)}")
+    logger_temp.warning(f"⚠️ Could not import GEE Data Fetcher class: {str(e)}")
     gee_fetcher = None
 
 try:
@@ -167,7 +166,7 @@ gee_initialized = False  # Track GEE initialization state
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup - non-blocking"""
-    global _startup_complete, gee_initialized
+    global _startup_complete, gee_initialized, gee_fetcher
     logger.info("🚀 Aurora OSI v3 Backend Starting")
     
     # Initialize GEE from Railway environment variable (base64 encoded JSON)
@@ -197,18 +196,24 @@ async def startup_event():
     except Exception as e:
         logger.error(f"❌ Railway GEE setup error: {str(e)}")
     
-    # Initialize GEE if available
+    # NOW initialize GEE Fetcher after credentials are ready
     try:
+        if gee_fetcher is None:
+            logger.info("📡 Initializing GEE Data Fetcher at startup...")
+            gee_fetcher = GEEDataFetcher()
+            logger.info("✅ GEE Data Fetcher initialized successfully at startup")
+        
         if gee_fetcher:
             gee_initialized = True
-            logger.info("✅ GEE initialized and ready")
+            logger.info("✅ GEE initialized and ready for satellite queries")
         else:
-            logger.warning("⚠️ GEE fetcher not available (failed to initialize during import)")
+            logger.warning("⚠️ GEE fetcher not available")
             gee_initialized = False
     except Exception as e:
         logger.error(f"❌ GEE initialization failed during startup: {str(e)}")
         import traceback
         traceback.print_exc()
+        gee_fetcher = None
         gee_initialized = False
     
     # Initialize background scan scheduler
