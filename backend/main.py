@@ -781,107 +781,105 @@ async def list_available_sensors() -> Dict:
 
 @app.post("/scans")
 async def create_scan(body: dict = None) -> Dict:
-    """Create a new scan - returns demo response, accepts any JSON"""
+    """Create a new scan - requires valid parameters, no demo mode"""
     try:
         logger.info(f"📋 POST /scans called with body: {body}")
         
-        # Generate demo response
+        if not body:
+            return {
+                "status": "error",
+                "error": "Missing required scan parameters",
+                "code": "INVALID_REQUEST",
+                "details": "body must contain location, scan_type, and minerals"
+            }
+        
+        # Validate required fields
+        required_fields = ['location', 'scan_type', 'minerals']
+        missing = [f for f in required_fields if f not in body]
+        if missing:
+            return {
+                "status": "error",
+                "error": f"Missing required fields: {', '.join(missing)}",
+                "code": "MISSING_FIELDS"
+            }
+        
         scan_id = f"scan-{int(datetime.now().timestamp())}"
         return {
             "scan_id": scan_id,
             "status": "pending",
-            "location": body.get('location', 'Tanzania') if body else "Demo Location",
-            "scan_type": body.get('scan_type', 'radius') if body else "radius",
-            "minerals": body.get('minerals', ['Cu', 'Au']) if body else ["Cu", "Au", "Zn"],
-            "message": f"Scan {scan_id} created successfully",
-            "demo_mode": True
+            "location": body['location'],
+            "scan_type": body['scan_type'],
+            "minerals": body['minerals'],
+            "message": f"Scan {scan_id} created successfully"
         }
     except Exception as e:
-        logger.warning(f"⚠️ Scan creation error (using fallback): {str(e)}")
-        # Return demo response regardless of error
-        scan_id = f"scan-{int(datetime.now().timestamp())}"
+        logger.error(f"❌ Scan creation error: {str(e)}")
         return {
-            "scan_id": scan_id,
-            "status": "pending",
-            "location": "Demo Location",
-            "scan_type": "radius",
-            "minerals": ["Cu", "Au", "Zn"],
-            "message": f"Scan {scan_id} created successfully (demo mode)",
-            "demo_mode": True
+            "status": "error",
+            "error": str(e),
+            "code": "SCAN_CREATION_FAILED"
         }
 
 
 @app.get("/scans")
 async def list_scans(limit: int = 100, offset: int = 0, status: Optional[str] = None) -> Dict:
-    """List all scans - returns mock data if scan_manager unavailable"""
+    """List all scans from database"""
     logger.info(f"📋 GET /scans called (limit={limit}, offset={offset})")
     
-    # Always return valid data
-    return {
-        "total": 3,
-        "limit": limit,
-        "offset": offset,
-        "scans": [
-            {
-                "scan_id": "scan-2026-001-tanzania",
-                "status": "completed",
-                "region": "Tanzania / Mozambique Belt",
-                "createdAt": "2026-01-18T20:00:00Z",
-                "minerals": ["Cu", "Au", "Co"],
-                "coverage": 95.2,
-                "confidence": 0.92
-            },
-            {
-                "scan_id": "scan-2026-002-congo",
-                "status": "running",
-                "region": "Democratic Republic of Congo",
-                "createdAt": "2026-01-18T19:30:00Z",
-                "minerals": ["Cu", "Zn"],
-                "coverage": 42.1,
-                "confidence": 0.78
-            },
-            {
-                "scan_id": "scan-2026-003-zambia",
-                "status": "pending",
-                "region": "Zambia Copperbelt",
-                "createdAt": "2026-01-18T20:30:00Z",
-                "minerals": ["Cu"],
-                "coverage": 0.0,
-                "confidence": 0.0
+    try:
+        if scan_manager:
+            scans = scan_manager.get_scans(limit=limit, offset=offset, status=status)
+            return {
+                "total": len(scans),
+                "limit": limit,
+                "offset": offset,
+                "scans": scans
             }
-        ]
-    }
+        else:
+            return {
+                "status": "error",
+                "error": "Scan database unavailable",
+                "code": "DB_UNAVAILABLE",
+                "details": "No scan data available - scan manager not initialized"
+            }
+    except Exception as e:
+        logger.error(f"❌ Error listing scans: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "code": "LIST_FAILED"
+        }
 
 
 @app.get("/scans/{scan_id}")
 async def get_scan(scan_id: str) -> Dict:
-    """Retrieve detailed scan information - returns demo data"""
+    """Retrieve detailed scan information from database"""
     logger.info(f"📋 GET /scans/{scan_id} called")
     
-    # Always return demo scan data
-    return {
-        "scan_id": scan_id,
-        "status": "completed",
-        "region": "Tanzania / Mozambique Belt",
-        "createdAt": datetime.now().isoformat(),
-        "completedAt": datetime.now().isoformat(),
-        "minerals": ["Cu", "Au", "Co"],
-        "coverage": 95.2,
-        "confidence": 0.92,
-        "detections": [
-            {"lat": -10.5, "lon": 33.5, "mineral": "Cu", "confidence": 0.95},
-            {"lat": -10.51, "lon": 33.51, "mineral": "Au", "confidence": 0.87},
-            {"lat": -10.52, "lon": 33.52, "mineral": "Co", "confidence": 0.82},
-        ],
-        "pixels_scanned": 1024000,
-        "pixels_with_detection": 975360,
-        "results": {
-            "total_detections": 3,
-            "detection_rate": 95.2,
-            "avg_confidence": 0.88,
-            "area_km2": 250.0
+    try:
+        if scan_manager:
+            scan_data = scan_manager.get_scan(scan_id)
+            if scan_data:
+                return scan_data
+            else:
+                return {
+                    "status": "error",
+                    "error": f"Scan {scan_id} not found",
+                    "code": "NOT_FOUND"
+                }
+        else:
+            return {
+                "status": "error",
+                "error": "Scan database unavailable",
+                "code": "DB_UNAVAILABLE"
+            }
+    except Exception as e:
+        logger.error(f"❌ Error retrieving scan: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "code": "RETRIEVAL_FAILED"
         }
-    }
 
 
 @app.delete("/scans/{scan_id}")
@@ -911,24 +909,33 @@ async def delete_scan(scan_id: str) -> Dict:
 
 @app.get("/jobs/{job_id}/status")
 async def get_job_status(job_id: str) -> Dict:
-    """Get job status - returns demo status"""
+    """Get job status from worker"""
     logger.info(f"📋 GET /jobs/{job_id}/status called")
     
-    # Always return demo job status
-    return {
-        "job_id": job_id,
-        "status": "completed",
-        "progress": 100,
-        "current_task": "Scan complete",
-        "detections_found": 3,
-        "timestamp": datetime.now().isoformat(),
-        "estimated_time_remaining": 0,
-        "results": {
-            "total_area_scanned": 250.0,
-            "detection_rate": 95.2,
-            "confidence_score": 0.92
+    try:
+        if scan_worker:
+            status = scan_worker.get_job_status(job_id)
+            if status:
+                return status
+            else:
+                return {
+                    "status": "error",
+                    "error": f"Job {job_id} not found",
+                    "code": "NOT_FOUND"
+                }
+        else:
+            return {
+                "status": "error",
+                "error": "Job worker unavailable",
+                "code": "WORKER_UNAVAILABLE"
+            }
+    except Exception as e:
+        logger.error(f"❌ Error retrieving job status: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "code": "STATUS_FAILED"
         }
-    }
 
 
 # ===== DATA LAKE ENDPOINTS =====
@@ -1216,36 +1223,18 @@ async def fetch_satellite_data(body: dict = None) -> Dict:
         else:
             logger.error(f"❌ Cannot fetch satellite data: gee_fetcher={gee_fetcher}, gee_initialized={gee_initialized}")
         
-        # Fallback: Return demo data for workflow testing
-        logger.info(f"📊 Returning demo Sentinel-2 data for workflow testing")
+        # STRICT ERROR: No demo data fallback. Better to fail than hallucinate.
+        logger.error(f"❌ Real satellite data unavailable - refusing to return demo data per user requirement")
         return {
-            "source": "Sentinel-2",
-            "level": "L2A",
-            "data_type": "DEMO",
-            "acquisition_date": datetime.now().isoformat().split('T')[0],
-            "latitude": latitude,
-            "longitude": longitude,
-            "bands": [
-                {"band": "B2", "wavelength": 490, "resolution": 10, "values": [float(0.15 + i*0.001) for i in range(100)]},
-                {"band": "B3", "wavelength": 560, "resolution": 10, "values": [float(0.18 + i*0.001) for i in range(100)]},
-                {"band": "B4", "wavelength": 665, "resolution": 10, "values": [float(0.12 + i*0.001) for i in range(100)]},
-                {"band": "B5", "wavelength": 705, "resolution": 20, "values": [float(0.22 + i*0.002) for i in range(100)]},
-                {"band": "B6", "wavelength": 740, "resolution": 20, "values": [float(0.25 + i*0.002) for i in range(100)]},
-                {"band": "B7", "wavelength": 783, "resolution": 20, "values": [float(0.28 + i*0.002) for i in range(100)]},
-                {"band": "B8", "wavelength": 842, "resolution": 10, "values": [float(0.35 + i*0.003) for i in range(100)]},
-                {"band": "B11", "wavelength": 1610, "resolution": 20, "values": [float(0.15 + i*0.001) for i in range(100)]},
-                {"band": "B12", "wavelength": 2190, "resolution": 20, "values": [float(0.08 + i*0.001) for i in range(100)]},
-            ],
-            "indices": {
-                "ndvi": [float(0.42 + i*0.002) for i in range(100)],
-                "ndbi": [float(0.18 + i*0.001) for i in range(100)],
-                "ndmi": [float(0.25 + i*0.001) for i in range(100)]
-            },
-            "metadata": {
-                "processing_status": "Demo data",
-                "note": "Real Sentinel-2 data not available for location. Using demo data for testing.",
-                "coordinates": {"latitude": latitude, "longitude": longitude},
-                "date_range": {"start": date_start, "end": date_end}
+            "status": "error",
+            "error": "Real satellite data unavailable for this location/timeframe",
+            "code": "NO_REAL_DATA_AVAILABLE",
+            "details": {
+                "latitude": latitude,
+                "longitude": longitude,
+                "date_start": date_start,
+                "date_end": date_end,
+                "message": "GEE query returned no usable data. No mock/demo data available per system policy."
             }
         }
     except Exception as e:
