@@ -309,6 +309,8 @@ const ReportsView: React.FC<ReportsViewProps> = ({ scanHistory, activeScanLocati
           </div>
         </div>
       )}
+    </div>
+  );
 };
 
 export default ReportsView;
