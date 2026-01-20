@@ -24,8 +24,8 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
   // Extract key findings from reports
   const pinnReport = report.componentReports.find(r => r.component === 'PINN');
   const usheReport = report.componentReports.find(r => r.component === 'USHE');
-  const tmalReport = report.componentReports.find(r => r.component === 'TAML');
-  const spectralReport = report.componentReports.find(r => r.component === 'Spectral');
+  const tmalReport = report.componentReports.find(r => r.component === 'TMAL');
+  const spectralReport = report.componentReports.find(r => r.component === 'Spectral' || r.component === 'SPECTRAL');
 
   const pinnData = pinnReport?.evidence as any;
   const usheData = usheReport?.evidence as any;

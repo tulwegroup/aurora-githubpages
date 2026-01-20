@@ -412,6 +412,7 @@ export interface ComponentReport {
 
 export interface ScanReport {
     id: string;
+    scanId?: string;
     scanName: string;
     timestamp: string;
     coordinates: {

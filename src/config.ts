@@ -3,6 +3,9 @@
 
 const ENV = (import.meta as any).env || {};
 
+// API Base URL for backend communication
+export const API_BASE_URL = ENV.VITE_BACKEND_URL || '/api';
+
 export const APP_CONFIG = {
     // Detect environment - in production (Railway), always use /api
     MODE: ENV.MODE || 'production',
