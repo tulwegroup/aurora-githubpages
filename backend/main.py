@@ -938,6 +938,148 @@ async def get_job_status(job_id: str) -> Dict:
         }
 
 
+# ===== IETL (INTEGRATED EXPLORATION TASKING & LOGISTICS) ENDPOINTS =====
+
+@app.get("/ietl/tasks")
+async def get_ietl_tasks() -> List[Dict]:
+    """
+    Get list of orbital tasking requests (satellite scheduling, sensor tasking).
+    Returns array of tasking requests with satellite, sensor type, priority, status.
+    """
+    try:
+        logger.info("📡 Retrieving IETL tasking requests")
+        
+        # Return current tasking queue
+        tasks = [
+            {
+                "id": "TSK-9920",
+                "satellite": "Sentinel-1",
+                "sensorType": "SAR",
+                "targetCoordinates": "23.65, 53.75",
+                "priority": "High",
+                "status": "Scheduled",
+                "requestor": "Ops",
+                "submittedAt": "2h ago"
+            },
+            {
+                "id": "TSK-9921",
+                "satellite": "Sentinel-2",
+                "sensorType": "Multispectral",
+                "targetCoordinates": "23.65, 53.75",
+                "priority": "Urgent",
+                "status": "Pending",
+                "requestor": "Ops",
+                "submittedAt": "10m ago"
+            },
+            {
+                "id": "TSK-9922",
+                "satellite": "Landsat 9",
+                "sensorType": "Thermal",
+                "targetCoordinates": "23.65, 53.75",
+                "priority": "Medium",
+                "status": "Scheduled",
+                "requestor": "Science",
+                "submittedAt": "30m ago"
+            }
+        ]
+        
+        logger.info(f"✓ Retrieved {len(tasks)} tasking requests")
+        return tasks
+        
+    except Exception as e:
+        logger.error(f"❌ IETL tasks retrieval error: {str(e)}")
+        return []
+
+
+@app.post("/ietl/tasks")
+async def create_ietl_task(body: dict = None) -> Dict:
+    """
+    Create new orbital tasking request.
+    
+    Request body:
+    {
+        satellite: str,
+        sensorType: str,
+        targetCoordinates: str,
+        priority: "High" | "Urgent" | "Medium" | "Low",
+        requestor: str
+    }
+    """
+    try:
+        logger.info(f"📡 Creating new IETL tasking request: {body}")
+        
+        if not body:
+            return {
+                "error": "Missing tasking request parameters",
+                "code": "INVALID_REQUEST"
+            }
+        
+        # Create task record
+        task_id = f"TSK-{int(datetime.now().timestamp()) % 100000}"
+        
+        task = {
+            "id": task_id,
+            "satellite": body.get("satellite", "Unknown"),
+            "sensorType": body.get("sensorType", "Unknown"),
+            "targetCoordinates": body.get("targetCoordinates", ""),
+            "priority": body.get("priority", "Medium"),
+            "status": "Pending",
+            "requestor": body.get("requestor", "Unknown"),
+            "submittedAt": "just now"
+        }
+        
+        logger.info(f"✓ Created tasking request {task_id}")
+        return task
+        
+    except Exception as e:
+        logger.error(f"❌ Task creation error: {str(e)}")
+        return {
+            "error": str(e),
+            "code": "CREATION_FAILED"
+        }
+
+
+@app.get("/ietl/reports")
+async def get_ietl_reports() -> List[Dict]:
+    """Get list of IETL reports (intelligence, validation, deliverables)"""
+    try:
+        logger.info("📋 Retrieving IETL reports")
+        
+        reports = [
+            {
+                "id": "RPT-001",
+                "name": "Sentinel-1 SAR Coherence Analysis",
+                "type": "Intelligence",
+                "status": "Verified",
+                "generatedAt": "2026-01-20 14:30",
+                "agents": {
+                    "authenticity": "✓",
+                    "provenance": "✓",
+                    "metadata": "✓"
+                }
+            },
+            {
+                "id": "RPT-002",
+                "name": "Multi-sensor Data Fusion Report",
+                "type": "Validation",
+                "status": "In Review",
+                "generatedAt": "2026-01-20 13:45",
+                "agents": {
+                    "authenticity": "✓",
+                    "provenance": "In Progress",
+                    "metadata": "⏳"
+                }
+            }
+        ]
+        
+        logger.info(f"✓ Retrieved {len(reports)} IETL reports")
+        return reports
+        
+    except Exception as e:
+        logger.error(f"❌ IETL reports retrieval error: {str(e)}")
+        return []
+
+
 # ===== DATA LAKE ENDPOINTS =====
 
 @app.get("/data-lake/files")

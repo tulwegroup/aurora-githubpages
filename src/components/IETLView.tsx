@@ -404,8 +404,8 @@ const IETLView: React.FC<IETLViewProps> = ({ campaign, customLogo }) => {
               <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar">
                   {tasks.map(task => (
                       <div key={task.id} className="bg-slate-900 p-4 rounded-lg border border-slate-800 flex justify-between items-center">
-                          <div><p className="text-sm font-bold text-white flex items-center"><Target size={14} className="mr-2 text-aurora-500"/> {task.sensorType}</p><p className="text-xs text-slate-500 font-mono mt-1">{task.targetCoordinates} | {task.submittedAt}</p></div>
-                          <div className="text-right"><span className={`text-[10px] px-2 py-1 rounded font-bold ${task.priority === 'Emergency' ? 'bg-red-900/30 text-red-400' : task.priority === 'Urgent' ? 'bg-amber-900/30 text-amber-400' : 'bg-blue-900/30 text-blue-400'}`}>{task.priority.toUpperCase()}</span><p className="text-xs font-bold text-slate-400 mt-1">{task.status}</p></div>
+                          <div><p className="text-sm font-bold text-white flex items-center"><Target size={14} className="mr-2 text-aurora-500"/> {task.sensorType || 'Unknown'}</p><p className="text-xs text-slate-500 font-mono mt-1">{task.targetCoordinates || 'N/A'} | {task.submittedAt || 'Unknown'}</p></div>
+                          <div className="text-right"><span className={`text-[10px] px-2 py-1 rounded font-bold ${(task.priority || 'Low') === 'Emergency' ? 'bg-red-900/30 text-red-400' : (task.priority || 'Low') === 'Urgent' ? 'bg-amber-900/30 text-amber-400' : 'bg-blue-900/30 text-blue-400'}`}>{(task.priority || 'Low').toUpperCase()}</span><p className="text-xs font-bold text-slate-400 mt-1">{task.status || 'Unknown'}</p></div>
                       </div>
                   ))}
               </div>
