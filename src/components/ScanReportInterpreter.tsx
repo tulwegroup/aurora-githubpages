@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { BookOpen, TrendingUp, Users, Beaker, DollarSign, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Download, Eye } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, TrendingUp, Users, Beaker, DollarSign, AlertCircle, CheckCircle, ChevronDown, ChevronUp, Download, Eye, Database } from 'lucide-react';
 import { ScanReport } from '../types';
+import GroundTruthConfirmation from './GroundTruthConfirmation';
 
 interface ScanReportInterpreterProps {
   report: ScanReport;
@@ -292,6 +293,29 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
             </div>
           </div>
         </div>
+      </CollapsibleSection>
+
+      {/* GROUND TRUTH INTEGRATION */}
+      <CollapsibleSection
+        title="Ground Truth Integration & Validation"
+        icon={Database}
+        section="groundtruth"
+        expanded={expandedSections['groundtruth'] !== false}
+        onToggle={() => toggleSection('groundtruth')}
+        color="indigo"
+      >
+        <GroundTruthConfirmation
+          scanId={report.scanId}
+          latitude={report.coordinates.lat}
+          longitude={report.coordinates.lon}
+          detectedMinerals={
+            spectralData?.detections?.map((d: any) => ({
+              name: d.mineral,
+              confidence: d.confidence,
+              wavelengthRange: d.wavelength_features?.join('-') || '',
+            })) || []
+          }
+        />
       </CollapsibleSection>
     </div>
   );
