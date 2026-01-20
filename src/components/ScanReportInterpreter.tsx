@@ -24,7 +24,7 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
   const pinnReport = report.componentReports.find(r => r.component === 'PINN');
   const usheReport = report.componentReports.find(r => r.component === 'USHE');
   const tmalReport = report.componentReports.find(r => r.component === 'TAML');
-  const spectralReport = report.componentReports.find(r => r.component === 'Spectral' || r.component === 'TMAL');
+  const spectralReport = report.componentReports.find(r => r.component === 'Spectral');
 
   const pinnData = pinnReport?.evidence as any;
   const usheData = usheReport?.evidence as any;
@@ -553,7 +553,7 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
 // ============= COLLAPSIBLE SECTION COMPONENT =============
 interface CollapsibleSectionProps {
   title: string;
-  icon: React.ComponentType<{ size: number; className?: string }>;
+  icon: React.ComponentType<any>;
   section: string;
   expanded: boolean;
   onToggle: () => void;
