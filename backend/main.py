@@ -2919,23 +2919,41 @@ async def get_all_scans() -> List[Dict]:
     """
     Retrieve all historical scans from database with pagination.
     Returns: Array of scan summaries (id, name, status, timestamp, etc.)
+    Returns empty array if database unavailable (prevents frontend crashes).
     """
     try:
         logger.info("📜 Retrieving scan history")
         
         if not scan_db:
-            logger.warning("⚠️ Database utilities not available")
+            logger.warning("⚠️ Database utilities not available - returning empty history")
+            return []
+        
+        # Check if scan_db has the required method
+        if not hasattr(scan_db, 'get_all_scans'):
+            logger.warning("⚠️ Database missing get_all_scans method - returning empty history")
             return []
         
         # Retrieve scans with limit and offset
         scans = scan_db.get_all_scans(limit=50, offset=0)
         
+        # Ensure we return a list
+        if not isinstance(scans, list):
+            logger.warning(f"⚠️ Database returned non-list: {type(scans)} - returning empty history")
+            return []
+        
         logger.info(f"✓ Retrieved {len(scans)} scans from history")
         return scans
         
+    except AttributeError as e:
+        logger.error(f"❌ Database method missing: {str(e)} - returning empty history")
+        return []
+    except TypeError as e:
+        logger.error(f"❌ Database call type error: {str(e)} - returning empty history")
+        return []
     except Exception as e:
-        logger.error(f"❌ Scan history retrieval error: {str(e)}")
-        # Return empty array instead of error - prevents frontend .map() crash
+        logger.error(f"❌ Scan history retrieval error: {str(e)} - returning empty history")
+        import traceback
+        traceback.print_exc()
         return []
 
 
@@ -2944,26 +2962,62 @@ async def get_scan_details(scan_id: str) -> Dict:
     """
     Retrieve complete scan details including analysis results and visualizations.
     Returns: {id, name, status, results: {pinn, ushe, tmal}, visualizations: {2d, 3d}, ...}
+    Returns error if database unavailable or scan not found.
     """
     try:
         logger.info(f"📖 Retrieving details for scan {scan_id}")
         
         if not scan_db:
             logger.warning("⚠️ Database utilities not available")
-            return {"error": "Database not ready", "code": "DB_NOT_READY"}
+            return {
+                "error": "Database not available",
+                "code": "DB_NOT_AVAILABLE",
+                "scan_id": scan_id
+            }
+        
+        # Check if scan_db has the required method
+        if not hasattr(scan_db, 'get_scan_details'):
+            logger.warning("⚠️ Database missing get_scan_details method")
+            return {
+                "error": "Database method not available",
+                "code": "DB_METHOD_NOT_AVAILABLE",
+                "scan_id": scan_id
+            }
         
         # Retrieve full scan details from database
         scan_detail = scan_db.get_scan_details(scan_id)
         
-        if "error" in scan_detail:
+        if isinstance(scan_detail, dict) and "error" in scan_detail:
             return scan_detail
         
         logger.info(f"✓ Retrieved full details for scan {scan_id}")
         return scan_detail
         
+    except AttributeError as e:
+        logger.error(f"❌ Database method missing: {str(e)}")
+        return {
+            "error": "Database method not available",
+            "code": "DB_METHOD_ERROR",
+            "scan_id": scan_id,
+            "details": str(e)
+        }
+    except TypeError as e:
+        logger.error(f"❌ Database call type error: {str(e)}")
+        return {
+            "error": "Database call failed",
+            "code": "DB_TYPE_ERROR",
+            "scan_id": scan_id,
+            "details": str(e)
+        }
     except Exception as e:
         logger.error(f"❌ Scan details retrieval error: {str(e)}")
-        return {"error": str(e), "code": "QUERY_ERROR"}
+        import traceback
+        traceback.print_exc()
+        return {
+            "error": str(e),
+            "code": "QUERY_ERROR",
+            "scan_id": scan_id
+        }
 
 
 # ================================================================
