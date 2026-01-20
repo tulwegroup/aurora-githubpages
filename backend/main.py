@@ -855,6 +855,8 @@ async def list_scans(limit: int = 100, offset: int = 0, status: Optional[str] = 
 async def get_all_scans() -> List[Dict]:
     """
     Retrieve all historical scans from database with pagination.
+    IMPORTANT: This route MUST come BEFORE @app.get("/scans/{scan_id}") 
+    FastAPI matches routes in order - specific paths before parameterized ones.
     Returns: Array of scan summaries (id, name, status, timestamp, etc.)
     Returns empty array if database unavailable (prevents frontend crashes).
     """
