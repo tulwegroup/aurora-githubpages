@@ -172,20 +172,33 @@ async def startup_event():
     
     # Initialize GEE from Railway environment variable (base64 encoded JSON)
     try:
-        gee_json_content = os.getenv("GEE_JSON_CONTENT")
-        msg = f"[STARTUP-GEE] 🔍 GEE_JSON_CONTENT check: {'FOUND (' + str(len(gee_json_content)) + ' bytes)' if gee_json_content else 'NOT FOUND'}\n"
-        sys.stderr.write(msg)
+        # Log all env vars that might contain GEE credentials
+        sys.stderr.write(f"[STARTUP-GEE] Checking environment variables...\n")
         sys.stderr.flush()
-        logger.info(f"🔍 Checking for GEE_JSON_CONTENT environment variable: {'FOUND' if gee_json_content else 'NOT FOUND'}")
+        all_vars = os.environ.keys()
+        gee_vars = [v for v in all_vars if 'GEE' in v.upper() or 'GOOGLE' in v.upper()]
+        sys.stderr.write(f"[STARTUP-GEE] Found GEE/GOOGLE related vars: {gee_vars}\n")
+        sys.stderr.flush()
+        for var in gee_vars:
+            var_val = os.environ.get(var, "")[:50]  # First 50 chars
+            sys.stderr.write(f"[STARTUP-GEE]   {var} = {var_val}...\n")
+            sys.stderr.flush()
+        
+        # Try multiple possible env var names
+        gee_json_content = os.getenv("GEE_JSON_CONTENT") or os.getenv("GEE_SERVICE_ACCOUNT") or os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+        
+        sys.stderr.write(f"[STARTUP-GEE] 🔍 GEE credentials check: {'FOUND' if gee_json_content else 'NOT FOUND'}\n")
+        sys.stderr.flush()
+        logger.info(f"🔍 Checking for GEE credentials: {'FOUND' if gee_json_content else 'NOT FOUND'}")
         
         if gee_json_content:
             try:
                 # Decode base64 JSON
-                sys.stderr.write(f"[STARTUP-GEE] 📦 Decoding base64 credentials ({len(gee_json_content)} bytes)...\n")
+                sys.stderr.write(f"[STARTUP-GEE] 📦 Decoding credentials ({len(gee_json_content)} bytes)...\n")
                 sys.stderr.flush()
-                logger.info(f"📦 GEE_JSON_CONTENT size: {len(gee_json_content)} bytes")
+                logger.info(f"📦 GEE credentials size: {len(gee_json_content)} bytes")
                 gee_json_str = base64.b64decode(gee_json_content).decode()
-                sys.stderr.write(f"[STARTUP-GEE] ✅ Successfully decoded: {len(gee_json_str)} bytes\n")
+                sys.stderr.write(f"[STARTUP-GEE] ✅ Decoded successfully: {len(gee_json_str)} bytes\n")
                 sys.stderr.flush()
                 logger.info(f"✅ Successfully decoded base64 content: {len(gee_json_str)} bytes")
                 
@@ -201,17 +214,17 @@ async def startup_event():
             except Exception as e:
                 sys.stderr.write(f"[STARTUP-GEE] ❌ Failed to decode: {str(e)}\n")
                 sys.stderr.flush()
-                logger.error(f"❌ Failed to decode Railway GEE credentials: {str(e)}")
+                logger.error(f"❌ Failed to decode GEE credentials: {str(e)}")
                 import traceback
                 traceback.print_exc()
         else:
-            sys.stderr.write(f"[STARTUP-GEE] ⚠️ GEE_JSON_CONTENT environment variable NOT found\n")
+            sys.stderr.write(f"[STARTUP-GEE] ⚠️ No GEE credentials found in any expected env var\n")
             sys.stderr.flush()
-            logger.warning("⚠️ GEE_JSON_CONTENT environment variable not found on Railway")
+            logger.warning("⚠️ GEE credentials not found in any expected environment variable")
     except Exception as e:
         sys.stderr.write(f"[STARTUP-GEE] ❌ Error: {str(e)}\n")
         sys.stderr.flush()
-        logger.error(f"❌ Railway GEE setup error: {str(e)}")
+        logger.error(f"❌ GEE setup error: {str(e)}")
     
     # NOW initialize GEE Fetcher after credentials are ready
     try:
