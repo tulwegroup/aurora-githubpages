@@ -23,8 +23,8 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
   // Extract key findings from reports
   const pinnReport = report.componentReports.find(r => r.component === 'PINN');
   const usheReport = report.componentReports.find(r => r.component === 'USHE');
-  const tmalReport = report.componentReports.find(r => r.component === 'TMAL');
-  const spectralReport = report.componentReports.find(r => r.component === 'Spectral');
+  const tmalReport = report.componentReports.find(r => r.component === 'TAML');
+  const spectralReport = report.componentReports.find(r => r.component === 'Spectral' || r.component === 'TMAL');
 
   const pinnData = pinnReport?.evidence as any;
   const usheData = usheReport?.evidence as any;
@@ -553,7 +553,7 @@ const ScanReportInterpreter: React.FC<ScanReportInterpreterProps> = ({ report, o
 // ============= COLLAPSIBLE SECTION COMPONENT =============
 interface CollapsibleSectionProps {
   title: string;
-  icon: React.ReactNode;
+  icon: React.ComponentType<{ size: number; className?: string }>;
   section: string;
   expanded: boolean;
   onToggle: () => void;
@@ -563,7 +563,7 @@ interface CollapsibleSectionProps {
 
 const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   title,
-  icon: Icon,
+  icon: IconComponent,
   section,
   expanded,
   onToggle,
@@ -586,7 +586,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
         className="w-full p-4 flex items-center justify-between bg-slate-900/50 hover:bg-slate-900 transition-colors"
       >
         <div className="flex items-center space-x-3 flex-1 text-left">
-          {typeof Icon === 'function' ? <Icon size={20} /> : Icon}
+          <IconComponent size={20} />
           <span className="font-bold text-white">{title}</span>
         </div>
         {expanded ? <ChevronUp size={20} className="text-slate-400" /> : <ChevronDown size={20} className="text-slate-400" />}
