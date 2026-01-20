@@ -306,22 +306,47 @@ async def health_check():
     except Exception as e:
         db_status = f"DISCONNECTED: {str(e)[:50]}"
     
-    gee_status = "INITIALIZED"
+    gee_status = "UNKNOWN"
+    gee_type = "None"
     try:
         # GEE status from global state
-        if gee_initialized:
+        if gee_fetcher:
             gee_status = "INITIALIZED"
+            gee_type = type(gee_fetcher).__name__
+        elif gee_initialized:
+            gee_status = "INITIALIZED (flag only)"
         else:
-            gee_status = "INITIALIZING"
+            gee_status = "NOT INITIALIZED"
+            # Check environment variables
+            env_vars = {
+                "GEE_JSON_CONTENT": "SET" if os.getenv("GEE_JSON_CONTENT") else "NOT SET",
+                "GEE_SERVICE_ACCOUNT": "SET" if os.getenv("GEE_SERVICE_ACCOUNT") else "NOT SET",
+                "GOOGLE_APPLICATION_CREDENTIALS_JSON": "SET" if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON") else "NOT SET",
+                "GEE_CREDENTIALS": "SET" if os.getenv("GEE_CREDENTIALS") else "NOT SET",
+            }
+            return {
+                "status": "operational",
+                "version": "3.1.0",
+                "database": db_status,
+                "gee": {
+                    "status": gee_status,
+                    "fetcher_type": gee_type,
+                    "environment_variables": env_vars
+                },
+                "timestamp": time.time()
+            }
     except Exception as e:
         logger.warning(f"⚠️ GEE status check error: {str(e)}")
-        gee_status = "UNKNOWN"
+        gee_status = f"ERROR: {str(e)[:50]}"
     
     return {
         "status": "operational",
         "version": "3.1.0",
         "database": db_status,
-        "gee": gee_status,
+        "gee": {
+            "status": gee_status,
+            "fetcher_type": gee_type
+        },
         "timestamp": time.time()
     }
 
